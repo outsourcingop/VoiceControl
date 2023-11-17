@@ -17,10 +17,6 @@ public class AiServiceProxy extends IAiService.Stub {
 
     public final static String KEY_LANGUAGE = "language";
 
-    public final static String KEY_AUDIO_FILE_PATH = "path";
-
-    public final static String KEY_TEXT = "text";
-
     private IAiService mAiService;
 
 
@@ -42,21 +38,31 @@ public class AiServiceProxy extends IAiService.Stub {
     }
 
     @Override
-    public void startAudioProcessing(Bundle params) {
+    public void startAudioRecognition(Bundle params) {
         try {
-            mAiService.startAudioProcessing(params);
+            mAiService.startAudioRecognition(params);
         } catch (RemoteException e) {
-            Log.w(TAG, "run startAudioProcessing() but " + e);
+            Log.w(TAG, "run startAudioRecognition() but " + e);
         }
     }
 
     @Override
-    public void startTextProcessing(Bundle params) {
+    public void stopAudioRecognition(Bundle params) {
         try {
-            mAiService.startTextProcessing(params);
+            mAiService.stopAudioRecognition(params);
         } catch (RemoteException e) {
-            Log.w(TAG, "run startTextProcessing() but " + e);
+            Log.w(TAG, "run stopAudioRecognition() but " + e);
         }
+    }
+
+    @Override
+    public boolean isAudioRecognizing() {
+        try {
+            return mAiService.isAudioRecognizing();
+        } catch (RemoteException e) {
+            Log.w(TAG, "run isAudioRecognizing() but " + e);
+        }
+        return false;
     }
 
     private static class DefaultAiServiceProxy extends IAiService.Stub {
@@ -66,11 +72,16 @@ public class AiServiceProxy extends IAiService.Stub {
         }
 
         @Override
-        public void startAudioProcessing(Bundle params) {
+        public void startAudioRecognition(Bundle params) {
         }
 
         @Override
-        public void startTextProcessing(Bundle params) {
+        public void stopAudioRecognition(Bundle params) {
+        }
+
+        @Override
+        public boolean isAudioRecognizing() {
+            return false;
         }
     }
 
