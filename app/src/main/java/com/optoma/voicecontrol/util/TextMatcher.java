@@ -120,15 +120,25 @@ public class TextMatcher {
         englishTextTable.add("Page up");
     }
 
-    public String matchText(String inputText) {
+    public String matchText(String language, String inputText) {
         inputText = inputText.toLowerCase().replaceAll("\\s+", "");
 
-        for (String text : englishTextTable) {
-            String normalizedText = text.toLowerCase().replaceAll("\\s+", "");
-            if (inputText.equals(normalizedText) || inputText.contains(normalizedText)) {
-                return text;
+        if (language.equalsIgnoreCase("en-us")) {
+            for (String text : englishTextTable) {
+                String normalizedText = text.toLowerCase().replaceAll("\\s+", "");
+                if (inputText.equals(normalizedText) || inputText.contains(normalizedText)) {
+                    return text;
+                }
+            }
+        } else {
+            for (String text : chineseTextTable) {
+                String normalizedText = text.toLowerCase().replaceAll("\\s+", "");
+                if (inputText.equals(normalizedText) || inputText.contains(normalizedText)) {
+                    return text;
+                }
             }
         }
+
         return "";
     }
 }

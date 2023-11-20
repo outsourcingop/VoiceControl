@@ -15,8 +15,8 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 
+import com.optoma.voicecontrol.presenter.ChatPresenter;
 import com.optoma.voicecontrol.presenter.SpeechRecognizerPresenter;
-import com.optoma.voicecontrol.presenter.SummaryPresenter;
 import com.optoma.voicecontrol.presenter.TextMatcherPresenter;
 import com.optoma.voicecontrol.presenter.TranscribePresenter;
 import com.optoma.voicecontrol.state.ProcessState;
@@ -82,7 +82,7 @@ public class AiService extends Service {
     private TranscribePresenter mTranscribePresenter;
     private SpeechRecognizerPresenter mSpeechRecognizerPresenter;
     private TextMatcherPresenter mTextMatcherPresenter;
-    private SummaryPresenter mSummaryPresenter;
+    private ChatPresenter mChatPresenter;
 
     private String mCurrentLanguage;
 
@@ -117,9 +117,10 @@ public class AiService extends Service {
                             long timeStamp) {
                         Log.d(TAG, "onAllPartsTranscribed -> getAndStoreSummary");
                         setState(ProcessState.END_TRANSCRIBE);
-                        setState(ProcessState.START_SUMMARY);
-                        mSummaryPresenter.processMultipleConversations(mCurrentLanguage,
-                                partNumberToTranscriber, timeStamp);
+                        setState(ProcessState.START_TEXT_MATCHING);
+                        ArrayList<String> texts = new ArrayList<>();
+                        texts.add(partNumberToTranscriber.get(0));
+                        mTextMatcherPresenter.startTextMatching(mCurrentLanguage, texts);
                     }
 
                     @Override
@@ -136,7 +137,7 @@ public class AiService extends Service {
                     public void onSpeechRecognitionCompleted(ArrayList<String> texts) {
                         setState(ProcessState.STOP_AUDIO_RECOGNITION);
                         setState(ProcessState.START_TEXT_MATCHING);
-                        mTextMatcherPresenter.startTextMatching(texts);
+                        mTextMatcherPresenter.startTextMatching(mCurrentLanguage, texts);
                     }
 
                     @Override
@@ -150,13 +151,17 @@ public class AiService extends Service {
         mTextMatcherPresenter = new TextMatcherPresenter(this, mLogTextCallbackWrapper,
                 new TextMatcherPresenter.TextMatcherCallback() {
                     @Override
-                    public void onTextMatched(String matchedText) {
+                    public void onTextMatched(String matchedText, ArrayList<String> texts) {
                         Log.d(TAG, "onTextMatched# matchedText=" + matchedText);
                         setState(ProcessState.END_TEXT_MATCHING);
                         if (TextUtils.isEmpty(matchedText)) {
-                            // TODO
-                            // pass to next presenter (To be removed setState(ProcessState.IDLE))
-                            setState(ProcessState.IDLE);
+                            setState(ProcessState.START_CHAT);
+                            if (texts.size() >= 1) {
+                                mChatPresenter.getChatResponse(mCurrentLanguage, texts.get(0));
+                            } else {
+                                Log.e(TAG, "onTextMatched: ERROR, input array size = " + texts.size());
+                                setState(ProcessState.IDLE);
+                            }
                         } else {
                             setState(ProcessState.IDLE);
                         }
@@ -170,19 +175,19 @@ public class AiService extends Service {
                     }
                 });
 
-        mSummaryPresenter = new SummaryPresenter(this, mLogTextCallbackWrapper,
-                new SummaryPresenter.SummaryCallback() {
+        mChatPresenter = new ChatPresenter(this, mLogTextCallbackWrapper,
+                new ChatPresenter.ChatCallback() {
                     @Override
-                    public void onSummarized() {
-                        Log.d(TAG, "onSummarized#");
-                        setState(ProcessState.END_SUMMARY);
+                    public void onChatResponse(String response) {
+                        Log.d(TAG, "onChatResponse#");
+                        setState(ProcessState.END_CHAT);
                         setState(ProcessState.IDLE);
                     }
 
                     @Override
                     public void onError(String error) {
                         Log.d(TAG, "onSummarizedError# error=" + error);
-                        setState(ProcessState.END_SUMMARY);
+                        setState(ProcessState.END_CHAT);
                         setState(ProcessState.IDLE);
                     }
                 });
@@ -196,6 +201,6 @@ public class AiService extends Service {
         mTranscribePresenter.destroy();
         mSpeechRecognizerPresenter.destroy();
         mTextMatcherPresenter.destroy();
-        mSummaryPresenter.destroy();
+        mChatPresenter.destroy();
     }
 }

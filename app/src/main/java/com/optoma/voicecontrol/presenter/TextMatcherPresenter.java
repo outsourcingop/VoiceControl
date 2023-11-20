@@ -14,7 +14,7 @@ public class TextMatcherPresenter extends BasicPresenter {
     private final TextMatcherCallback mTextMatcherCallback;
 
     public interface TextMatcherCallback extends ErrorCallback {
-        void onTextMatched(String matchedText);
+        void onTextMatched(String matchedText, ArrayList<String> texts);
     }
 
     public TextMatcherPresenter(Context context, LogTextCallback callback,
@@ -24,10 +24,10 @@ public class TextMatcherPresenter extends BasicPresenter {
         mTextMatcherCallback = textMatcherCallback;
     }
 
-    public void startTextMatching(ArrayList<String> texts) {
+    public void startTextMatching(String language, ArrayList<String> texts) {
         TextMatcher matcher = new TextMatcher();
         Log.d(TAG, "startTextMatching +++");
-        String matchResult = texts.size() == 1 ? matcher.matchText(texts.get(0)) : "";
+        String matchResult = texts.size() == 1 ? matcher.matchText(language, texts.get(0)) : "";
         Log.d(TAG, "startTextMatching ---");
         if (TextUtils.isEmpty(matchResult)) {
             mLogTextCallback.onLogReceived("NOT MATCH any actions.");
@@ -35,6 +35,6 @@ public class TextMatcherPresenter extends BasicPresenter {
         } else {
             mLogTextCallback.onLogReceived("MATCH the action=" + matchResult);
         }
-        mTextMatcherCallback.onTextMatched(matchResult);
+        mTextMatcherCallback.onTextMatched(matchResult, texts);
     }
 }
