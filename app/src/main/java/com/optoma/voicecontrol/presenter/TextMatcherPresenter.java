@@ -26,12 +26,8 @@ public class TextMatcherPresenter extends BasicPresenter {
 
     public void startTextMatching(ArrayList<String> texts) {
         TextMatcher matcher = new TextMatcher();
-        String matchResult = "";
         Log.d(TAG, "startTextMatching +++");
-        for (String text : texts) {
-            matchResult = matcher.matchText(text);
-            Log.d(TAG, "  " + text + " matched=" + matchResult);
-        }
+        String matchResult = texts.size() == 1 ? matcher.matchText(texts.get(0)) : "";
         Log.d(TAG, "startTextMatching ---");
         if (TextUtils.isEmpty(matchResult)) {
             mLogTextCallback.onLogReceived("NOT MATCH any actions.");
