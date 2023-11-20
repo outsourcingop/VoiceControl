@@ -17,6 +17,8 @@ public class AiServiceProxy extends IAiService.Stub {
 
     public final static String KEY_LANGUAGE = "language";
 
+    public final static String KEY_AUDIO_FILE_PATH = "path";
+
     private IAiService mAiService;
 
 
@@ -34,6 +36,15 @@ public class AiServiceProxy extends IAiService.Stub {
             mAiService.initialize(params);
         } catch (RemoteException e) {
             Log.w(TAG, "run initialize() but " + e);
+        }
+    }
+
+    @Override
+    public void startAudioProcessing(Bundle params) {
+        try {
+            mAiService.startAudioProcessing(params);
+        } catch (RemoteException e) {
+            Log.w(TAG, "run startAudioProcessing() but " + e);
         }
     }
 
@@ -72,6 +83,9 @@ public class AiServiceProxy extends IAiService.Stub {
         }
 
         @Override
+        public void startAudioProcessing(Bundle params) {
+        }
+
         public void startAudioRecognition(Bundle params) {
         }
 

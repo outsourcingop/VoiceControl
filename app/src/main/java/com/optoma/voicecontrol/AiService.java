@@ -1,5 +1,6 @@
 package com.optoma.voicecontrol;
 
+import static com.optoma.voicecontrol.AiServiceProxy.KEY_AUDIO_FILE_PATH;
 import static com.optoma.voicecontrol.AiServiceProxy.KEY_CALLBACK;
 import static com.optoma.voicecontrol.AiServiceProxy.KEY_LANGUAGE;
 import static com.optoma.voicecontrol.util.DebugConfig.TAG_MM;
@@ -16,9 +17,11 @@ import androidx.annotation.Nullable;
 import com.optoma.voicecontrol.presenter.SaveTextToFilePresenter;
 import com.optoma.voicecontrol.presenter.SpeechRecognizerPresenter;
 import com.optoma.voicecontrol.presenter.SummaryPresenter;
+import com.optoma.voicecontrol.presenter.TranscribePresenter;
 import com.optoma.voicecontrol.state.ProcessState;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -27,13 +30,24 @@ public class AiService extends Service {
 
     private static final String TAG = TAG_WITH_CLASS_NAME ? "AiService" : TAG_MM;
 
-    private final Executor mExecutors = Executors.newSingleThreadExecutor();
-
     private final IAiService.Stub mAiService = new IAiService.Stub() {
         @Override
         public void initialize(Bundle params) {
             Log.d(TAG, "AIDL.Stub#initialize params=" + params.size());
             mAiServiceCallback.setProxy((IAiServiceCallback) params.getBinder(KEY_CALLBACK));
+        }
+
+        @Override
+        public void startAudioProcessing(Bundle params) {
+            Log.d(TAG, "AIDL.Stub#startAudioProcessing params=" + params.size());
+            mCurrentLanguage = params.getString(KEY_LANGUAGE);
+            List<String> audioFilePathList = new ArrayList<>();
+            String audioFilePath = params.getString(KEY_AUDIO_FILE_PATH);
+            if (audioFilePath != null) {
+                audioFilePathList.add(audioFilePath);
+            }
+            setState(ProcessState.START_TRANSCRIBE);
+            mTranscribePresenter.uploadAudioAndTranscribe(audioFilePathList, mCurrentLanguage);
         }
 
         @Override
@@ -66,6 +80,7 @@ public class AiService extends Service {
     private final AiServiceCallbackProxy mAiServiceCallback = new AiServiceCallbackProxy();
 
 
+    private TranscribePresenter mTranscribePresenter;
     private SpeechRecognizerPresenter mSpeechRecognizerPresenter;
     private SaveTextToFilePresenter mSaveTextToFilePresenter;
     private SummaryPresenter mSummaryPresenter;
@@ -91,6 +106,31 @@ public class AiService extends Service {
     }
 
     private void setupPresenter() {
+        mTranscribePresenter = new TranscribePresenter(this, mLogTextCallbackWrapper,
+                new TranscribePresenter.TranscribeCallback() {
+                    @Override
+                    public void onTranscribed(String transcribeResult, long timeStamp) {
+                        Log.d(TAG, "onTranscribed -> getAndStoreSummary");
+                    }
+
+                    @Override
+                    public void onAllPartsTranscribed(Map<Integer, String> partNumberToTranscriber,
+                            long timeStamp) {
+                        Log.d(TAG, "onAllPartsTranscribed -> getAndStoreSummary");
+                        setState(ProcessState.END_TRANSCRIBE);
+                        setState(ProcessState.START_SUMMARY);
+                        mSummaryPresenter.processMultipleConversations(mCurrentLanguage,
+                                partNumberToTranscriber, timeStamp);
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        Log.d(TAG, "onTranscribedError# error=" + error);
+                        setState(ProcessState.END_TRANSCRIBE);
+                        setState(ProcessState.IDLE);
+                    }
+                });
+
         mSpeechRecognizerPresenter = new SpeechRecognizerPresenter(this, mLogTextCallbackWrapper,
                 new SpeechRecognizerPresenter.SpeechRecognizerCallback() {
                     @Override
@@ -151,6 +191,7 @@ public class AiService extends Service {
     }
 
     private void destroyPresenter() {
+        mTranscribePresenter.destroy();
         mSpeechRecognizerPresenter.destroy();
         mSaveTextToFilePresenter.destroy();
         mSummaryPresenter.destroy();
