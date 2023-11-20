@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- The component name for the target activity -->
+    <string name="intent_target_package_name">com.optoma.whiteboard</string>
+    <string name="intent_target_class_name">com.optoma.whiteboard.cb.MainActivity</string>
     <!-- Output file name -->
     <string name="meeting_minutes_file_name">Meeting_Minutes_%1$s.txt</string>
     <string name="meeting_actions_file_name">Meeting_Actions_%1$s.txt</string>
+    <string name="screenshot_file_name">Screenshot_%1$s.bmp</string>
     <!-- Date format for output file name -->
     <string name="date_format">yyyy_MM_dd_HH_mm</string>
     <!-- Minutes -->

@@ -1,6 +1,6 @@
 package com.optoma.voicecontrol;
 
-import static com.optoma.voicecontrol.util.DebugConfig.TAG_MM;
+import static com.optoma.voicecontrol.util.DebugConfig.TAG_VC;
 import static com.optoma.voicecontrol.util.DebugConfig.TAG_WITH_CLASS_NAME;
 
 import android.os.RemoteException;
@@ -10,7 +10,7 @@ import androidx.annotation.Nullable;
 
 public class AiServiceCallbackProxy extends IAiServiceCallback.Stub {
 
-    private static final String TAG = TAG_WITH_CLASS_NAME ? AiServiceCallbackProxy.class.getSimpleName() : TAG_MM;
+    private static final String TAG = TAG_WITH_CLASS_NAME ? AiServiceCallbackProxy.class.getSimpleName() : TAG_VC;
 
     private IAiServiceCallback mAiServiceCallback;
 

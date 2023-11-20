@@ -126,9 +126,9 @@ public class TextMatcher {
         for (String text : englishTextTable) {
             String normalizedText = text.toLowerCase().replaceAll("\\s+", "");
             if (inputText.equals(normalizedText) || inputText.contains(normalizedText)) {
-                return "Match： " + text;
+                return text;
             }
         }
-        return "No Match Text";
+        return "";
     }
 }

@@ -48,6 +48,12 @@ public class FileUtil {
         return new File(getExternalStoragePublicDirectory(), fileName);
     }
 
+    public static File createScreenshotFile(Context context, long timestamp) {
+        String fileName = context.getString(R.string.screenshot_file_name,
+                convertTimestampToDateTime(context, timestamp));
+        return new File(getExternalStoragePublicDirectory(), fileName);
+    }
+
     private static String convertTimestampToDateTime(Context context, long timestamp) {
         Date date = new Date(timestamp);
         @SuppressLint("SimpleDateFormat")

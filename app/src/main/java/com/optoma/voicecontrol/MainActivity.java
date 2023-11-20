@@ -3,8 +3,9 @@ package com.optoma.voicecontrol;
 import static com.optoma.voicecontrol.AiServiceProxy.KEY_AUDIO_FILE_PATH;
 import static com.optoma.voicecontrol.AiServiceProxy.KEY_CALLBACK;
 import static com.optoma.voicecontrol.AiServiceProxy.KEY_LANGUAGE;
-import static com.optoma.voicecontrol.util.DebugConfig.TAG_MM;
+import static com.optoma.voicecontrol.util.DebugConfig.TAG_VC;
 import static com.optoma.voicecontrol.util.DebugConfig.TAG_WITH_CLASS_NAME;
+import static com.optoma.voicecontrol.util.FileUtil.createScreenshotFile;
 
 import android.Manifest;
 import android.app.Activity;
@@ -12,7 +13,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.net.Uri;
@@ -33,41 +33,26 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.BinderThread;
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 
-import com.optoma.voicecontrol.speechrecognizer.AudioTensorSource;
-import com.optoma.voicecontrol.speechrecognizer.SpeechRecognizer;
 import com.optoma.voicecontrol.state.ProcessState;
 import com.optoma.voicecontrol.util.FileUtil;
-import com.optoma.voicecontrol.util.TextMatcher;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import ai.onnxruntime.OnnxTensor;
-import ai.onnxruntime.OrtException;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = TAG_WITH_CLASS_NAME ? "MainActivity" : TAG_MM;
+    private static final String TAG = TAG_WITH_CLASS_NAME ? "MainActivity" : TAG_VC;
 
     private static final int REQUEST_CODE_AUDIO_PICK = 1;
-    private static final int RECORD_AUDIO_PERMISSION_REQUEST_CODE = 2;
 
     private static final String ACTION_AI_SERVICE = "android.intent.action.AI_SERVICE";
 
     private final AiServiceProxy mAiServiceProxy = new AiServiceProxy();
-
-    private ExecutorService workerThreadExecutor = Executors.newSingleThreadExecutor();
-
-    private AtomicBoolean stopRecordingFlag = new AtomicBoolean(false);
 
     private boolean mAiServiceBound;
 
@@ -81,8 +66,6 @@ public class MainActivity extends AppCompatActivity {
     private ImageView mScreenshotImage;
     private TextView mLogText;
     private TextView mStatusText;
-
-    private SpeechRecognizer speechRecognizer;
 
     private final ServiceConnection mAiServiceConnection = new ServiceConnection() {
         @Override
@@ -151,44 +134,24 @@ public class MainActivity extends AppCompatActivity {
                         }
                     });
 
-    private void setSuccessfulResult(final SpeechRecognizer.Result result) {
-        runOnUiThread(() -> {
-            mStatusText.setText(
-                    "Successful speech recognition (" + result.getInferenceTimeInMs() + " ms)");
-            if (result.getText().isEmpty()) {
-                updateLogText("<No speech detected.>");
-            } else {
-                String recognitionResult = result.getText();
-                updateLogText(recognitionResult);
-                TextMatcher matcher = new TextMatcher();
-                String matchResult = matcher.matchText(recognitionResult);
-                updateLogText(matchResult);
-            }
-        });
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
-    private void initializeSpeechRecognizer() throws OrtException {
-        InputStream inputStream = getResources().openRawResource(R.raw.whisper_cpu_int8_model);
-        byte[] modelBytes;
-        try {
-            modelBytes = inputStream.readAllBytes();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
-        speechRecognizer = new SpeechRecognizer(modelBytes);
-    }
+    private final ActivityResultLauncher<String> mRequestAudioRecordPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(),
+                    isGranted -> {
+                        if (isGranted) {
+                            updateLogText("start audio recognition");
+                            startAudioRecognition();
+                        } else {
+                            String logText = "Not allow the " +
+                                    Manifest.permission.RECORD_AUDIO + " permission";
+                            updateLogText(logText);
+                            Toast.makeText(MainActivity.this, logText, Toast.LENGTH_LONG).show();
+                        }
+                    });
 
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        try {
-            initializeSpeechRecognizer();
-        } catch (OrtException e) {
-            throw new RuntimeException(e);
-        }
         bindAiService();
 
         setContentView(R.layout.activity_main);
@@ -218,26 +181,47 @@ public class MainActivity extends AppCompatActivity {
             if (screenshot != null) {
                 mScreenshotImage.setImageBitmap(screenshot);
             }
+            //
+            File screenshotFile = saveScreenshot(screenshot);
+            sendWhiteBoardIntent(screenshotFile);
             return true;
         });
     }
 
     public static Bitmap takeScreenshot(Context context) {
-        try {
-            View rootView = ((ViewGroup) ((Activity) context).findViewById(
-                    android.R.id.content)).getChildAt(0);
+        View rootView = ((ViewGroup) ((Activity) context).findViewById(
+                android.R.id.content)).getChildAt(0);
 
-            Bitmap screenshot = Bitmap.createBitmap(rootView.getWidth(), rootView.getHeight(),
-                    Bitmap.Config.ARGB_8888);
+        Bitmap screenshot = Bitmap.createBitmap(rootView.getWidth(), rootView.getHeight(),
+                Bitmap.Config.ARGB_8888);
 
-            Canvas canvas = new Canvas(screenshot);
-            rootView.draw(canvas);
+        Canvas canvas = new Canvas(screenshot);
+        rootView.draw(canvas);
 
-            return screenshot;
-        } catch (Exception e) {
+        return screenshot;
+    }
+
+    private File saveScreenshot(Bitmap screenshot) {
+        File screenshotFile = createScreenshotFile(this, System.currentTimeMillis());
+        try (FileOutputStream out = new FileOutputStream(screenshotFile)) {
+            screenshot.compress(Bitmap.CompressFormat.PNG, 100, out);
+        } catch (IOException e) {
             e.printStackTrace();
-            return null;
         }
+        Log.d(TAG, "Save screenshot under the folder=" + screenshotFile.getPath());
+        updateLogText("Save screenshot under the folder=" + screenshotFile.getPath());
+        return screenshotFile;
+    }
+
+    private void sendWhiteBoardIntent(File file) {
+        Intent intent = new Intent();
+        intent.setComponent(new ComponentName(getString(R.string.intent_target_package_name),
+                getString(R.string.intent_target_class_name)));
+        intent.setDataAndType(Uri.fromFile(file), "image/*");
+        Log.d(TAG, "Ready to start intent=" + intent);
+        updateLogText("Ready to start intent=" + intent);
+        // TODO
+        // startActivity(intent);
     }
 
     private void setupLogText() {
@@ -274,7 +258,6 @@ public class MainActivity extends AppCompatActivity {
     private void setupAudioFileSelection() {
         mFileSelectorButton = findViewById(R.id.buttonFromFile);
         mFileSelectorButton.setOnClickListener(view -> {
-            disableAudioButtons();
             if (Build.VERSION.SDK_INT >= 33) {
                 mRequestAudioPickPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO);
             } else {
@@ -286,107 +269,13 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupSpeechRecognizer() {
         mRecordAudioButton = findViewById(R.id.record_audio_button);
-        mRecordAudioButton.setOnClickListener(view -> {
-            if (!hasRecordAudioPermission()) {
-                requestPermissions(
-                        new String[]{Manifest.permission.RECORD_AUDIO},
-                        RECORD_AUDIO_PERMISSION_REQUEST_CODE
-                );
-                return;
-            }
-
-            // Disable audio buttons first.
-            // The stop button will be enabled by the recording task.
-            disableAudioButtons();
-
-            workerThreadExecutor.submit(() -> {
-                try {
-                    stopRecordingFlag.set(false);
-                    runOnUiThread(() -> mStopRecordingAudioButton.setEnabled(true));
-
-                    OnnxTensor audioTensor = AudioTensorSource.Companion.fromRecording(
-                            stopRecordingFlag);
-                    SpeechRecognizer.Result result = speechRecognizer.run(audioTensor);
-                    setSuccessfulResult(result);
-                } catch (Exception e) {
-//                    setError(e);
-                } finally {
-                    resetDefaultAudioButtonState();
-                }
-            });
-        });
-
+        mRecordAudioButton.setOnClickListener(v -> mRequestAudioRecordPermissionLauncher.launch(
+                Manifest.permission.RECORD_AUDIO));
         mStopRecordingAudioButton = findViewById(R.id.stop_recording_audio_button);
         mStopRecordingAudioButton.setOnClickListener(view -> {
-            // Disable audio buttons first.
-            // The audio button state will be reset at the end of the record audio task.
-            disableAudioButtons();
-
-            stopRecordingFlag.set(true);
-        });
-
-        resetDefaultAudioButtonState();
-
-    }
-
-    private boolean hasRecordAudioPermission() {
-        return ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-        ) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    @Override
-    public void onRequestPermissionsResult(
-            int requestCode,
-            @NonNull String[] permissions,
-            @NonNull int[] grantResults
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == RECORD_AUDIO_PERMISSION_REQUEST_CODE) {
-            if (!hasRecordAudioPermission()) {
-                Toast.makeText(
-                        this,
-                        "Permission to record audio was not granted.",
-                        Toast.LENGTH_SHORT
-                ).show();
-            }
-        }
-    }
-
-    private void resetDefaultAudioButtonState() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mFileSelectorButton.setEnabled(true);
-                mRecordAudioButton.setEnabled(true);
-                mStopRecordingAudioButton.setEnabled(false);
-            }
-        });
-    }
-
-    private void disableAudioButtons() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mFileSelectorButton.setEnabled(false);
-                mRecordAudioButton.setEnabled(false);
-                mStopRecordingAudioButton.setEnabled(false);
-            }
-        });
-    }
-
-    private void startOrStopAudioRecording() {
-        boolean isAudioRecognizing = mAiServiceProxy.isAudioRecognizing();
-        if (isAudioRecognizing) {
             updateLogText("stop audio recognition");
             stopAudioRecognition();
-//            mMicrophoneButton.setText("Start Audio Recognition by Microphone");
-        } else {
-            updateLogText("start audio recognition");
-            startAudioRecognition();
-//            mMicrophoneButton.setText("Stop Audio Recognition by Microphone");
-        }
+        });
     }
 
     private void updateLogText(String text) {
@@ -408,7 +297,18 @@ public class MainActivity extends AppCompatActivity {
         boolean interactWithUi = mProcessState.interactWithUi;
         mLanguageSpinner.setEnabled(interactWithUi);
         mFileSelectorButton.setEnabled(interactWithUi);
-//        mMicrophoneButton.setEnabled(interactWithUi);
+        mScreenshotButton.setEnabled(interactWithUi);
+        // Depends on the audio recognizing state
+        if (state == ProcessState.START_AUDIO_RECOGNITION) {
+            mRecordAudioButton.setEnabled(false);
+            mStopRecordingAudioButton.setEnabled(true);
+        } else if (state == ProcessState.STOP_AUDIO_RECOGNITION) {
+            mRecordAudioButton.setEnabled(true);
+            mStopRecordingAudioButton.setEnabled(false);
+        } else {
+            mRecordAudioButton.setEnabled(interactWithUi);
+            mStopRecordingAudioButton.setEnabled(interactWithUi);
+        }
     }
 
     private void bindAiService() {
@@ -475,7 +375,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        stopRecordingFlag.set(true);
     }
 
     @Override
@@ -483,7 +382,5 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
 
         unbindAiService();
-        workerThreadExecutor.shutdown();
-        speechRecognizer.close();
     }
 }

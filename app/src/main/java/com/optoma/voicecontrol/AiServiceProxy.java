@@ -1,6 +1,6 @@
 package com.optoma.voicecontrol;
 
-import static com.optoma.voicecontrol.util.DebugConfig.TAG_MM;
+import static com.optoma.voicecontrol.util.DebugConfig.TAG_VC;
 import static com.optoma.voicecontrol.util.DebugConfig.TAG_WITH_CLASS_NAME;
 
 import android.os.Bundle;
@@ -11,7 +11,7 @@ import androidx.annotation.Nullable;
 
 public class AiServiceProxy extends IAiService.Stub {
 
-    private static final String TAG = TAG_WITH_CLASS_NAME ? AiServiceProxy.class.getSimpleName() : TAG_MM;
+    private static final String TAG = TAG_WITH_CLASS_NAME ? AiServiceProxy.class.getSimpleName() : TAG_VC;
 
     public final static String KEY_CALLBACK = "callback";
 
@@ -19,14 +19,16 @@ public class AiServiceProxy extends IAiService.Stub {
 
     public final static String KEY_AUDIO_FILE_PATH = "path";
 
-    private IAiService mAiService;
+    private final IAiService mDefaultAiServiceProxy = new DefaultAiServiceProxy();
+
+    private IAiService mAiService = mDefaultAiServiceProxy;
 
 
     public void setProxy(@Nullable IAiService aiService) {
         if (aiService != null) {
             mAiService = aiService;
         } else {
-            mAiService = new DefaultAiServiceProxy();
+            mAiService = mDefaultAiServiceProxy;
         }
     }
 

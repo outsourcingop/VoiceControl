@@ -40,7 +40,7 @@ public class SpeechRecognizerPresenter extends BasicPresenter {
     public SpeechRecognizerPresenter(Context context, LogTextCallback callback,
             SpeechRecognizerCallback speechRecognizerCallback) {
         super(context, callback, speechRecognizerCallback);
-        TAG = SaveTextToFilePresenter.class.getSimpleName();
+        TAG = SpeechRecognizerPresenter.class.getSimpleName();
         mSpeechRecognizerCallback = speechRecognizerCallback;
         mSpeechRegion = context.getResources().getString(R.string.speech_region);
         mCopyOnWriteTexts = new CopyOnWriteArrayList<>();
@@ -83,9 +83,9 @@ public class SpeechRecognizerPresenter extends BasicPresenter {
         ArrayList<String> texts = new ArrayList<>(mCopyOnWriteTexts);
         // Swipe texts
         mCopyOnWriteTexts.clear();
+        setContinuousRecognition(false);
         // Start next steps
         mSpeechRecognizerCallback.onSpeechRecognitionCompleted(texts);
-        setContinuousRecognition(false);
     }
 
     public void stopContinuousRecognitionAsync() {

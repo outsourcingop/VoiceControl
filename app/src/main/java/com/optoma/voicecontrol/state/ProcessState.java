@@ -6,10 +6,10 @@ public enum ProcessState {
     END_TRANSCRIBE(false),
     START_SUMMARY(false),
     END_SUMMARY(false),
-    START_AUDIO_RECOGNITION(true),
-    STOP_AUDIO_RECOGNITION(true),
-    START_TEXT_SAVING(false),
-    END_TEXT_SAVING(false);
+    START_AUDIO_RECOGNITION(false),
+    STOP_AUDIO_RECOGNITION(false),
+    START_TEXT_MATCHING(false),
+    END_TEXT_MATCHING(false);
 
     public final boolean interactWithUi;
 
