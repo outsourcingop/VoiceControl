@@ -36,18 +36,6 @@ public class FileUtil {
         return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
     }
 
-    public static File createMeetingMinutesFile(Context context, long timestamp) {
-        String fileName = context.getString(R.string.meeting_minutes_file_name,
-                convertTimestampToDateTime(context, timestamp));
-        return new File(getExternalStoragePublicDirectory(), fileName);
-    }
-
-    public static File createMeetingActionsFile(Context context, long timestamp) {
-        String fileName = context.getString(R.string.meeting_actions_file_name,
-                convertTimestampToDateTime(context, timestamp));
-        return new File(getExternalStoragePublicDirectory(), fileName);
-    }
-
     public static File createScreenshotFile(Context context, long timestamp) {
         String fileName = context.getString(R.string.screenshot_file_name,
                 convertTimestampToDateTime(context, timestamp));

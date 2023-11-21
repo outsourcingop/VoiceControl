@@ -154,14 +154,9 @@ public class AiService extends Service {
                     public void onTextMatched(String matchedText, ArrayList<String> texts) {
                         Log.d(TAG, "onTextMatched# matchedText=" + matchedText);
                         setState(ProcessState.END_TEXT_MATCHING);
-                        if (TextUtils.isEmpty(matchedText)) {
+                        if (TextUtils.isEmpty(matchedText) && texts.size() >= 1) {
                             setState(ProcessState.START_CHAT);
-                            if (texts.size() >= 1) {
-                                mChatPresenter.getChatResponse(mCurrentLanguage, texts.get(0));
-                            } else {
-                                Log.e(TAG, "onTextMatched: ERROR, input array size = " + texts.size());
-                                setState(ProcessState.IDLE);
-                            }
+                            mChatPresenter.getChatResponse(mCurrentLanguage, texts.get(0));
                         } else {
                             setState(ProcessState.IDLE);
                         }

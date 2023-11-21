@@ -25,16 +25,16 @@ public class TextMatcherPresenter extends BasicPresenter {
     }
 
     public void startTextMatching(String language, ArrayList<String> texts) {
-        TextMatcher matcher = new TextMatcher();
         Log.d(TAG, "startTextMatching +++");
+        TextMatcher matcher = new TextMatcher();
         String matchResult = texts.size() == 1 ? matcher.matchText(language, texts.get(0)) : "";
-        Log.d(TAG, "startTextMatching ---");
         if (TextUtils.isEmpty(matchResult)) {
             mLogTextCallback.onLogReceived("NOT MATCH any actions.");
             mLogTextCallback.onLogReceived("Should go to the next presenter");
         } else {
             mLogTextCallback.onLogReceived("MATCH the action=" + matchResult);
         }
+        Log.d(TAG, "startTextMatching ---");
         mTextMatcherCallback.onTextMatched(matchResult, texts);
     }
 }

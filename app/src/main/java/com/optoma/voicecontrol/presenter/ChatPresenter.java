@@ -23,9 +23,11 @@ import okhttp3.ResponseBody;
 public class ChatPresenter extends BasicPresenter {
 
     private final ChatPresenter.ChatCallback mChatCallback;
+
     public interface ChatCallback extends ErrorCallback {
         void onChatResponse(String response);
     }
+
     public ChatPresenter(Context context, LogTextCallback callback, ChatCallback chatCallback) {
         super(context, callback, chatCallback);
 
@@ -35,10 +37,7 @@ public class ChatPresenter extends BasicPresenter {
 
     public void getChatResponse(String language, String conversation) {
         Log.d(TAG, "sendMessageToAzureOpenAI# " + "\n" + conversation);
-        mLogTextCallback.onLogReceived(
-                "sendMessageToAzureOpenAI -- Start");
-
-        final int maxTokens = mContext.getResources().getInteger(R.integer.max_summary_tokens);
+        mLogTextCallback.onLogReceived("sendMessageToAzureOpenAI -- Start");
 
         List<ChatMessage> messages = new ArrayList<>();
         if (language.equalsIgnoreCase("en-us")) {
@@ -46,7 +45,7 @@ public class ChatPresenter extends BasicPresenter {
                     "You are an AI assistant MUST USE english to reply."));
         } else {
             messages.add(new ChatMessage("system",
-                    "您是一個AI助手，必須使用 '''繁體中文''' 回覆。" ));
+                    "您是一個AI助手，必須使用 '''繁體中文''' 回覆。"));
         }
         messages.add(new ChatMessage("user", conversation));
 

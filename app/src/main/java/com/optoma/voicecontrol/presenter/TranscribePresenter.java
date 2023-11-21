@@ -3,7 +3,6 @@ package com.optoma.voicecontrol.presenter;
 import static com.optoma.voicecontrol.BuildConfig.DEFAULT_ENDPOINTS_PROTOCAL;
 import static com.optoma.voicecontrol.BuildConfig.STORAGE_ACCOUNT_KEY;
 import static com.optoma.voicecontrol.BuildConfig.STORAGE_ACCOUNT_NAME;
-import static com.optoma.voicecontrol.util.FileUtil.createMeetingMinutesFile;
 import static com.optoma.voicecontrol.util.FileUtil.extractPartNumber;
 
 import android.content.Context;
@@ -95,7 +94,6 @@ public class TranscribePresenter extends BasicPresenter {
 
     public void uploadAudioAndTranscribe(List<String> absolutePathList, String languageString) {
         Log.d(TAG, "uploadFileFromFile: start");
-        mLogTextCallback.onLogReceived("uploadFileFromFile: start...");
 
         mExecutorService = Executors.newFixedThreadPool(absolutePathList.size());
         List<Completable> completables = new ArrayList<>();
@@ -147,7 +145,6 @@ public class TranscribePresenter extends BasicPresenter {
                             // Storage init action--
 
                             Log.d(TAG, "Upload complete " + blob.getUri());
-                            mLogTextCallback.onLogReceived("Upload complete " + blob.getUri());
 
                             mWavContentUrl = blob.getUri().toString();
                             createSpeechToText(languageString, extractPartNumber(absolutePath));
@@ -175,7 +172,6 @@ public class TranscribePresenter extends BasicPresenter {
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(() -> {
                     Log.d(TAG, "*** executorService.shutdown().");
-                    mLogTextCallback.onLogReceived("*** executorService.shutdown().");
                     // Handle completion on the main thread
                     mExecutorService.shutdown();
                 }, throwable -> {
@@ -191,8 +187,7 @@ public class TranscribePresenter extends BasicPresenter {
      * @param filePartNumber The part number of the audio file (starting from 0).
      */
     private void createSpeechToText(String languageString, int filePartNumber) {
-        mLogTextCallback.onLogReceived(
-                "createSpeechToText: " + languageString + "\tfilePartNumber: " + filePartNumber);
+        Log.d(TAG, "createSpeechToText: " + languageString + "\tfilePartNumber: " + filePartNumber);
 
         TranscribeProperties properties = new TranscribeProperties();
         properties.diarizationEnabled = true;
@@ -224,8 +219,6 @@ public class TranscribePresenter extends BasicPresenter {
 
                                 if (response.code() == 201) {
                                     Log.d(TAG,
-                                            "createTranscription success: " + transcriptionID + ", filePartNumber: " + filePartNumber);
-                                    mLogTextCallback.onLogReceived(
                                             "createTranscription success: " + transcriptionID + ", filePartNumber: " + filePartNumber);
                                     mTranscribeIDToPartNumber.put(transcriptionID, filePartNumber);
                                     startPolling(transcriptionID);
@@ -404,42 +397,10 @@ public class TranscribePresenter extends BasicPresenter {
 
         // Get all results from server and start to process next step.
         if (mPartNumberToTranscriberForSummary.size() == mTranscribeIDToPartNumber.size()) {
-            storeMeetingMinutesToFile(timestamp);
+            mTranscribeCallback.onAllPartsTranscribed(mPartNumberToTranscriberForSummary,
+                    timestamp);
         }
-        mLogTextCallback.onLogReceived("Transcription:\n" + sbTranscriptionForView.toString());
-    }
-
-    private void storeMeetingMinutesToFile(long timestamp) {
-        Log.d(TAG, "storeMeetingMinutesToFile#");
-
-        File outputFile = createMeetingMinutesFile(mContext, timestamp);
-
-        mCompositeDisposable.add(
-                Completable.fromAction(() -> {
-                            try {
-                                FileOutputStream outputStream = new FileOutputStream(outputFile);
-
-                                for (int i = 0; i < mPartNumberToTranscriberForView.size(); i++) {
-                                    outputStream.write(mPartNumberToTranscriberForView.get(i).getBytes());
-                                }
-
-                                outputStream.close();
-
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        })
-                        .subscribeOn(Schedulers.io())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(() -> {
-                            String saveFileLog = "***** Saved meeting minutes to "
-                                    + outputFile.getPath() + " *****\n";
-                            Log.d(TAG, saveFileLog);
-                            mLogTextCallback.onLogReceived(saveFileLog);
-                            mTranscribeCallback.onAllPartsTranscribed(
-                                    mPartNumberToTranscriberForSummary, timestamp);
-                        })
-        );
+        mLogTextCallback.onLogReceived("Transcription:\n" + sbTranscriptionForView);
     }
 
     private void deleteCloudFileAfterTranscribeEnd() {
