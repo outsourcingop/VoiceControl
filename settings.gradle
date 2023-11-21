@@ -16,5 +16,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MeetingMinutes"
+rootProject.name = "VoiceControl"
 include ':app'
