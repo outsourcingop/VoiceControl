@@ -206,7 +206,7 @@ public class FileUtil {
         return newFileAbsolutePath;
     }
 
-    public static int extractPartNumber(String absolutePath) {
+    public static int extractPartNumber(String absolutePath) throws NumberFormatException {
         String fileName = absolutePath.substring(absolutePath.lastIndexOf("/") + 1);
 
         Log.d(TAG, "fileName: " + fileName);

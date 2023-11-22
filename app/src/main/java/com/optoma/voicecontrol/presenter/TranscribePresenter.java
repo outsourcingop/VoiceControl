@@ -171,6 +171,7 @@ public class TranscribePresenter extends BasicPresenter {
                 }, throwable -> {
                     Log.w(TAG, "fail to uploadAudio, %s", throwable);
                     mExecutorService.shutdown();
+                    performError("fail to upload audio");
                 });
     }
 
