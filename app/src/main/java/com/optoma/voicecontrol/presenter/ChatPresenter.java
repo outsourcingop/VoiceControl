@@ -4,7 +4,6 @@ import android.content.Context;
 import android.util.Log;
 
 import com.optoma.voicecontrol.BuildConfig;
-import com.optoma.voicecontrol.LogTextCallback;
 import com.optoma.voicecontrol.model.azureopenai.chat.ChatMessage;
 import com.optoma.voicecontrol.model.azureopenai.chat.ChatRequest;
 import com.optoma.voicecontrol.model.azureopenai.chat.ChatResponse;
@@ -23,14 +22,14 @@ public class ChatPresenter extends BasicPresenter {
 
     private final ChatPresenter.ChatCallback mChatCallback;
 
-    public interface ChatCallback extends ErrorCallback {
+    public interface ChatCallback extends BasicCallback {
         void onChatRequest(String question);
 
         void onChatResponse(String response);
     }
 
-    public ChatPresenter(Context context, LogTextCallback callback, ChatCallback chatCallback) {
-        super(context, callback, chatCallback);
+    public ChatPresenter(Context context, ChatCallback chatCallback) {
+        super(context, chatCallback);
 
         TAG = ChatPresenter.class.getSimpleName();
         mChatCallback = chatCallback;
@@ -63,8 +62,6 @@ public class ChatPresenter extends BasicPresenter {
                                 ChatResponse result = response.body();
                                 String chatResponse = result.choices.get(0).message.content;
                                 Log.d(TAG, "onResponse: " + chatResponse);
-                                mLogTextCallback.onLogReceived("" +
-                                        "===== \n AI:\n" + chatResponse + "\n=====");
                                 mChatCallback.onChatResponse(chatResponse);
                             } else {
                                 ResponseBody errorBody = response.errorBody();

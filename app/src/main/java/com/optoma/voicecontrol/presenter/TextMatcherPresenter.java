@@ -4,7 +4,6 @@ import android.content.Context;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.optoma.voicecontrol.LogTextCallback;
 import com.optoma.voicecontrol.util.TextMatcher;
 
 import java.util.ArrayList;
@@ -13,28 +12,26 @@ public class TextMatcherPresenter extends BasicPresenter {
 
     private final TextMatcherCallback mTextMatcherCallback;
 
-    public interface TextMatcherCallback extends ErrorCallback {
-        void onTextMatched(String matchedText, ArrayList<String> texts);
+    public interface TextMatcherCallback extends BasicCallback {
+        void onTextMatched(String matchedText, String originalText);
     }
 
-    public TextMatcherPresenter(Context context, LogTextCallback callback,
-            TextMatcherCallback textMatcherCallback) {
-        super(context, callback, textMatcherCallback);
+    public TextMatcherPresenter(Context context, TextMatcherCallback textMatcherCallback) {
+        super(context, textMatcherCallback);
         TAG = TextMatcherPresenter.class.getSimpleName();
         mTextMatcherCallback = textMatcherCallback;
     }
 
-    public void startTextMatching(String language, ArrayList<String> texts) {
+    public void startTextMatching(String language, String recognizedText) {
         Log.d(TAG, "startTextMatching +++");
         TextMatcher matcher = new TextMatcher();
-        String matchResult = texts.size() == 1 ? matcher.matchText(language, texts.get(0)) : "";
+        String matchResult = matcher.matchText(language, recognizedText);
         if (TextUtils.isEmpty(matchResult)) {
-            mLogTextCallback.onLogReceived("NOT MATCH any actions.");
-            mLogTextCallback.onLogReceived("Should go to the next presenter");
+            mBasicCallback.onLogReceived("NOT MATCH any actions.");
         } else {
-            mLogTextCallback.onLogReceived("MATCH the action=" + matchResult);
+            mBasicCallback.onLogReceived("MATCH the action=" + matchResult);
         }
         Log.d(TAG, "startTextMatching ---");
-        mTextMatcherCallback.onTextMatched(matchResult, texts);
+        mTextMatcherCallback.onTextMatched(matchResult, recognizedText);
     }
 }

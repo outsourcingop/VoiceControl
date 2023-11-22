@@ -15,7 +15,6 @@ import com.microsoft.azure.storage.blob.BlobContainerPublicAccessType;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
-import com.optoma.voicecontrol.LogTextCallback;
 import com.optoma.voicecontrol.model.RecognizedPhrase;
 import com.optoma.voicecontrol.model.TranscribeBean;
 import com.optoma.voicecontrol.model.TranscribeBody;
@@ -25,8 +24,6 @@ import com.optoma.voicecontrol.model.TranscribeValue;
 import com.optoma.voicecontrol.network.CognitiveServiceHelper;
 import com.optoma.voicecontrol.network.NetworkServiceHelper;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
@@ -70,21 +67,20 @@ public class TranscribePresenter extends BasicPresenter {
 
     private ExecutorService mExecutorService;
 
-    public TranscribePresenter(Context context, LogTextCallback callback,
-            TranscribeCallback transcribeCallback) {
-        super(context, callback, transcribeCallback);
+    public TranscribePresenter(Context context, TranscribeCallback transcribeCallback) {
+        super(context, transcribeCallback);
         TAG = TranscribePresenter.class.getSimpleName();
         mTranscribeCallback = transcribeCallback;
     }
 
-    public interface TranscribeCallback extends ErrorCallback {
+    public interface TranscribeCallback extends BasicCallback {
         void onTranscribed(String text, long timeStamp);
 
         void onAllPartsTranscribed(Map<Integer, String> partNumberToTranscriber, long timeStamp);
     }
 
     private final Map<String, Integer> mTranscribeIDToPartNumber = new HashMap<>();
-    private final Map<Integer, String> mPartNumberToTranscriberForSummary = new HashMap<>();
+    private final Map<Integer, String> mPartNumberToTranscriberForChat = new HashMap<>();
     private final Map<Integer, String> mPartNumberToTranscriberForView = new HashMap<>();
     private final Map<String, Disposable> mPollingDisposables = new HashMap<>();
 
@@ -98,13 +94,11 @@ public class TranscribePresenter extends BasicPresenter {
         mExecutorService = Executors.newFixedThreadPool(absolutePathList.size());
         List<Completable> completables = new ArrayList<>();
         mTranscribeIDToPartNumber.clear();
-        mPartNumberToTranscriberForSummary.clear();
+        mPartNumberToTranscriberForChat.clear();
         mPartNumberToTranscriberForView.clear();
         mPollingDisposables.clear();
 
         for (String absolutePath : absolutePathList) {
-            Log.d(TAG, "extractPartNumber: " + absolutePath + "\t result" + extractPartNumber(
-                    absolutePath));
             Completable completable = Completable.create(emitter -> {
                         try {
                             // Storage init action++
@@ -157,7 +151,7 @@ public class TranscribePresenter extends BasicPresenter {
                             mCloudBlobContainer = container;
 
                         } catch (URISyntaxException | StorageException | InvalidKeyException |
-                                 IOException e) {
+                                 IOException | NumberFormatException e) {
                             e.printStackTrace();
                             emitter.onError(e);
                         }
@@ -254,18 +248,18 @@ public class TranscribePresenter extends BasicPresenter {
                                 if ("Running".equalsIgnoreCase(result.status)) {
                                     resultLog = "Transcribe " + partNumber + " is Running...";
                                     Log.d(TAG, resultLog);
-                                    mLogTextCallback.onLogReceived(resultLog);
+                                    mBasicCallback.onLogReceived(resultLog);
                                 } else if ("Succeeded".equalsIgnoreCase(result.status)) {
                                     resultLog = "***** Transcribe " + partNumber + " is Ready! " +
                                             "*****\n";
                                     Log.d(TAG, resultLog);
-                                    mLogTextCallback.onLogReceived(resultLog);
+                                    mBasicCallback.onLogReceived(resultLog);
                                     stopPolling(transcriptionID);
                                     getTranscriber(transcriptionID);
                                 } else {
                                     resultLog = "Failed to get transcription with unknown reason";
                                     Log.d(TAG, resultLog);
-                                    mLogTextCallback.onLogReceived(resultLog);
+                                    mBasicCallback.onLogReceived(resultLog);
                                 }
                             } else {
                                 ResponseBody errorBody = response.errorBody();
@@ -361,19 +355,19 @@ public class TranscribePresenter extends BasicPresenter {
     private void postProcessTranscriptionData(long timestamp, int filePartNumber) {
         Log.d(TAG,
                 "postProcessTranscriptionData# t=" + timestamp + ", filePartNumber=" + filePartNumber);
-        StringBuilder sbTranscriptionForSummary = new StringBuilder();
+        StringBuilder sbTranscriptionForChat = new StringBuilder();
         StringBuilder sbTranscriptionForView = new StringBuilder();
 
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
         sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 
         for (RecognizedPhrase phrase : mTranscribeResult.recognizedPhrases) {
-            // string for the next steps to summarize
-            String transcriptionForSummary = "{speaker " + phrase.speaker +
+            // string for the next steps to chat
+            String transcriptionForChat = "{speaker " + phrase.speaker +
                     ":" +
                     phrase.nBest.get(0).display +
                     "}, ";
-            sbTranscriptionForSummary.append(transcriptionForSummary);
+            sbTranscriptionForChat.append(transcriptionForChat);
 
             // string for log appearance and saving file.
             // here we transform minutes into milliseconds
@@ -391,16 +385,15 @@ public class TranscribePresenter extends BasicPresenter {
             sbTranscriptionForView.append(transcriptionForView);
         }
 
-        mPartNumberToTranscriberForSummary.put(filePartNumber,
-                sbTranscriptionForSummary.toString());
+        mPartNumberToTranscriberForChat.put(filePartNumber, sbTranscriptionForChat.toString());
         mPartNumberToTranscriberForView.put(filePartNumber, sbTranscriptionForView.toString());
 
         // Get all results from server and start to process next step.
-        if (mPartNumberToTranscriberForSummary.size() == mTranscribeIDToPartNumber.size()) {
-            mTranscribeCallback.onAllPartsTranscribed(mPartNumberToTranscriberForSummary,
+        if (mPartNumberToTranscriberForChat.size() == mTranscribeIDToPartNumber.size()) {
+            mTranscribeCallback.onAllPartsTranscribed(mPartNumberToTranscriberForChat,
                     timestamp);
         }
-        mLogTextCallback.onLogReceived("Transcription:\n" + sbTranscriptionForView);
+        mBasicCallback.onLogReceived("Transcription:\n" + sbTranscriptionForView);
     }
 
     private void deleteCloudFileAfterTranscribeEnd() {

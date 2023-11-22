@@ -69,15 +69,7 @@ public class AiService extends Service {
         }
     };
 
-    private final LogTextCallback mLogTextCallbackWrapper = new LogTextCallback() {
-        @Override
-        public void onLogReceived(String text) {
-            mAiServiceCallback.onLogReceived(text);
-        }
-    };
-
     private final AiServiceCallbackProxy mAiServiceCallback = new AiServiceCallbackProxy();
-
 
     private TranscribePresenter mTranscribePresenter;
     private SpeechRecognizerPresenter mSpeechRecognizerPresenter;
@@ -105,7 +97,7 @@ public class AiService extends Service {
     }
 
     private void setupPresenter() {
-        mTranscribePresenter = new TranscribePresenter(this, mLogTextCallbackWrapper,
+        mTranscribePresenter = new TranscribePresenter(this,
                 new TranscribePresenter.TranscribeCallback() {
                     @Override
                     public void onTranscribed(String transcribeResult, long timeStamp) {
@@ -118,9 +110,13 @@ public class AiService extends Service {
                         Log.d(TAG, "onAllPartsTranscribed -> getAndStoreSummary");
                         setState(ProcessState.END_TRANSCRIBE);
                         setState(ProcessState.START_TEXT_MATCHING);
-                        ArrayList<String> texts = new ArrayList<>();
-                        texts.add(partNumberToTranscriber.get(0));
-                        mTextMatcherPresenter.startTextMatching(mCurrentLanguage, texts);
+                        mTextMatcherPresenter.startTextMatching(mCurrentLanguage,
+                                partNumberToTranscriber.get(0));
+                    }
+
+                    @Override
+                    public void onLogReceived(String text) {
+                        mAiServiceCallback.onLogReceived(text);
                     }
 
                     @Override
@@ -131,13 +127,23 @@ public class AiService extends Service {
                     }
                 });
 
-        mSpeechRecognizerPresenter = new SpeechRecognizerPresenter(this, mLogTextCallbackWrapper,
+        mSpeechRecognizerPresenter = new SpeechRecognizerPresenter(this,
                 new SpeechRecognizerPresenter.SpeechRecognizerCallback() {
                     @Override
-                    public void onSpeechRecognitionCompleted(ArrayList<String> texts) {
+                    public void onSpeechRecognitionCompleted(String recognizedText) {
                         setState(ProcessState.STOP_AUDIO_RECOGNITION);
                         setState(ProcessState.START_TEXT_MATCHING);
-                        mTextMatcherPresenter.startTextMatching(mCurrentLanguage, texts);
+                        mTextMatcherPresenter.startTextMatching(mCurrentLanguage, recognizedText);
+                    }
+
+                    @Override
+                    public void onSpeechRecognitionStoppingAutomatically() {
+                        mAiServiceCallback.onSpeechRecognitionStoppingAutomatically();
+                    }
+
+                    @Override
+                    public void onLogReceived(String text) {
+                        mAiServiceCallback.onLogReceived(text);
                     }
 
                     @Override
@@ -148,18 +154,23 @@ public class AiService extends Service {
                     }
                 });
 
-        mTextMatcherPresenter = new TextMatcherPresenter(this, mLogTextCallbackWrapper,
+        mTextMatcherPresenter = new TextMatcherPresenter(this,
                 new TextMatcherPresenter.TextMatcherCallback() {
                     @Override
-                    public void onTextMatched(String matchedText, ArrayList<String> texts) {
+                    public void onTextMatched(String matchedText, String recognizedText) {
                         Log.d(TAG, "onTextMatched# matchedText=" + matchedText);
                         setState(ProcessState.END_TEXT_MATCHING);
-                        if (TextUtils.isEmpty(matchedText) && texts.size() >= 1) {
+                        if (TextUtils.isEmpty(matchedText) && !TextUtils.isEmpty(recognizedText)) {
                             setState(ProcessState.START_CHAT);
-                            mChatPresenter.getChatResponse(mCurrentLanguage, texts.get(0));
+                            mChatPresenter.getChatResponse(mCurrentLanguage, recognizedText);
                         } else {
                             setState(ProcessState.IDLE);
                         }
+                    }
+
+                    @Override
+                    public void onLogReceived(String text) {
+                        mAiServiceCallback.onLogReceived(text);
                     }
 
                     @Override
@@ -170,31 +181,38 @@ public class AiService extends Service {
                     }
                 });
 
-        mChatPresenter = new ChatPresenter(this, mLogTextCallbackWrapper,
-                new ChatPresenter.ChatCallback() {
-                    @Override
-                    public void onChatRequest(String question) {
-                        Log.d(TAG, "onChatStarted#");
-                        mAiServiceCallback.onConversationReceived(
-                                getString(R.string.conversation_request_format, question));
-                    }
+        mChatPresenter = new ChatPresenter(this, new ChatPresenter.ChatCallback() {
+            @Override
+            public void onChatRequest(String request) {
+                Log.d(TAG, "onChatStarted#");
+                String decoratedRequest = getString(R.string.conversation_request_format, request);
+                onLogReceived(decoratedRequest);
+                mAiServiceCallback.onConversationReceived(decoratedRequest);
+            }
 
-                    @Override
-                    public void onChatResponse(String response) {
-                        Log.d(TAG, "onChatResponse#");
-                        mAiServiceCallback.onConversationReceived(
-                                getString(R.string.conversation_response_format, response));
-                        setState(ProcessState.END_CHAT);
-                        setState(ProcessState.IDLE);
-                    }
+            @Override
+            public void onChatResponse(String response) {
+                Log.d(TAG, "onChatResponse#");
+                String decoratedResponse = getString(R.string.conversation_response_format,
+                        response);
+                onLogReceived(decoratedResponse);
+                mAiServiceCallback.onConversationReceived(decoratedResponse);
+                setState(ProcessState.END_CHAT);
+                setState(ProcessState.IDLE);
+            }
 
-                    @Override
-                    public void onError(String error) {
-                        Log.d(TAG, "onChatError# error=" + error);
-                        setState(ProcessState.END_CHAT);
-                        setState(ProcessState.IDLE);
-                    }
-                });
+            @Override
+            public void onLogReceived(String text) {
+                mAiServiceCallback.onLogReceived(text);
+            }
+
+            @Override
+            public void onError(String error) {
+                Log.d(TAG, "onChatError# error=" + error);
+                setState(ProcessState.END_CHAT);
+                setState(ProcessState.IDLE);
+            }
+        });
     }
 
     private void setState(ProcessState state) {

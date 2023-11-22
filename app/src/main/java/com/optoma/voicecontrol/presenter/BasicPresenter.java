@@ -13,20 +13,20 @@ public class BasicPresenter {
     protected String TAG = BasicPresenter.class.getSimpleName();
 
     protected final Context mContext;
-    protected final LogTextCallback mLogTextCallback;
-    protected final ErrorCallback mErrorCallback;
+    protected final BasicCallback mBasicCallback;
     protected final int mEachSegmentDuration;
 
     protected CompositeDisposable mCompositeDisposable = new CompositeDisposable();
 
-    public interface ErrorCallback {
+    public interface BasicCallback {
+        void onLogReceived(String text);
+
         void onError(String error);
     }
 
-    public BasicPresenter(Context context, LogTextCallback callback, ErrorCallback errorCallback) {
+    public BasicPresenter(Context context, BasicCallback basicCallback) {
         mContext = context;
-        mLogTextCallback = callback;
-        mErrorCallback = errorCallback;
+        mBasicCallback = basicCallback;
         mEachSegmentDuration = context.getResources().getInteger(R.integer.each_segment_duration);
     }
 
@@ -38,7 +38,7 @@ public class BasicPresenter {
 
     final void performError(String errorLog) {
         Log.w(TAG, errorLog);
-        mLogTextCallback.onLogReceived(errorLog);
-        mErrorCallback.onError(errorLog);
+        mBasicCallback.onLogReceived(errorLog);
+        mBasicCallback.onError(errorLog);
     }
 }

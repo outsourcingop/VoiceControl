@@ -11,6 +11,8 @@
     <integer name="each_segment_duration">8</integer>
     <!-- Replace below with your own service region (e.g., "westus") -->
     <string name="speech_region">eastasia</string>
+    <!-- Duration of the speech recognition stopping (milliseconds) -->
+    <integer name="automatically_stop_speech_recognition">3000</integer>
     <!-- Output file name -->
     <string name="conversation_request_format">Q:\n%1$s\n</string>
     <string name="conversation_response_format">A:\n%1$s\n</string>

@@ -50,6 +50,15 @@ public class AiServiceCallbackProxy extends IAiServiceCallback.Stub {
         }
     }
 
+    @Override
+    public void onSpeechRecognitionStoppingAutomatically() {
+        try {
+            mAiServiceCallback.onSpeechRecognitionStoppingAutomatically();
+        } catch (RemoteException e) {
+            Log.w(TAG, "run onSpeechRecognitionStoppingAutomatically() but " + e);
+        }
+    }
+
     private static class DefaultAiServiceCallbackProxy extends IAiServiceCallback.Stub {
         @Override
         public void onStateChanged(String state) {
@@ -61,6 +70,10 @@ public class AiServiceCallbackProxy extends IAiServiceCallback.Stub {
 
         @Override
         public void onConversationReceived(String text) {
+        }
+
+        @Override
+        public void onSpeechRecognitionStoppingAutomatically() {
         }
     }
 }

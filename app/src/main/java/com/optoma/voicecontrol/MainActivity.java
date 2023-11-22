@@ -107,6 +107,16 @@ public class MainActivity extends AppCompatActivity {
                 mConversationWindow.updateConversationOnWindow(text);
             });
         }
+
+        @Override
+        @BinderThread
+        public void onSpeechRecognitionStoppingAutomatically() {
+            runOnUiThread(() -> {
+                Log.d(TAG, "onSpeechRecognitionStoppingAutomatically#");
+                updateLogText("Automatically stopping speech recognition !");
+                mStopRecordingAudioButton.performClick();
+            });
+        }
     };
 
     private final ActivityResultLauncher<String> mRequestAudioPickPermissionLauncher =
