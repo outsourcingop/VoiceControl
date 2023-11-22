@@ -9,5 +9,5 @@ interface IAiServiceCallback {
 
     void onLogReceived(in String text) = 2;
 
-    void onSummaryAndActionsReceived(in String summary) = 3;
+    void onConversationReceived(in String text) = 3;
 }

@@ -5,27 +5,23 @@ import static com.optoma.voicecontrol.AiServiceProxy.KEY_CALLBACK;
 import static com.optoma.voicecontrol.AiServiceProxy.KEY_LANGUAGE;
 import static com.optoma.voicecontrol.util.DebugConfig.TAG_VC;
 import static com.optoma.voicecontrol.util.DebugConfig.TAG_WITH_CLASS_NAME;
-import static com.optoma.voicecontrol.util.FileUtil.createScreenshotFile;
 
 import android.Manifest;
-import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -39,10 +35,10 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.optoma.voicecontrol.state.ProcessState;
 import com.optoma.voicecontrol.util.FileUtil;
+import com.optoma.voicecontrol.view.ConversationWindow;
+import com.optoma.voicecontrol.view.ConversationWindowFactory;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -58,12 +54,12 @@ public class MainActivity extends AppCompatActivity {
 
     private ProcessState mProcessState;
 
+    private AlertDialog mRequestPermissionDialog;
+    private ConversationWindow mConversationWindow;
     private Spinner mLanguageSpinner;
     private Button mFileSelectorButton;
     private Button mRecordAudioButton;
     private Button mStopRecordingAudioButton;
-    private Button mScreenshotButton;
-    private ImageView mScreenshotImage;
     private TextView mLogText;
     private TextView mStatusText;
 
@@ -105,10 +101,10 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         @BinderThread
-        public void onSummaryAndActionsReceived(String summary) {
+        public void onConversationReceived(String text) {
             runOnUiThread(() -> {
-                Log.d(TAG, "onSummaryAndActionsReceived#\n" + summary);
-                updateLogText(summary);
+                Log.d(TAG, "onConversationReceived#\n" + text);
+                mConversationWindow.updateConversationOnWindow(text);
             });
         }
     };
@@ -167,50 +163,65 @@ public class MainActivity extends AppCompatActivity {
         setupLanguageSpinner();
         setupAudioFileSelection();
         setupSpeechRecognizer();
-        setupScreenshot();
+        setupFloatingButton();
 
         processStateChanged(ProcessState.IDLE);
     }
 
-    private void setupScreenshot() {
-        mScreenshotButton = findViewById(R.id.buttonScreenShot);
-        mScreenshotImage = findViewById(R.id.imageScreenShot);
-
-        mScreenshotButton.setOnLongClickListener(view -> {
-            Bitmap screenshot = takeScreenshot(MainActivity.this);
-            if (screenshot != null) {
-                mScreenshotImage.setImageBitmap(screenshot);
-            }
-            //
-            File screenshotFile = saveScreenshot(screenshot);
+    private void setupFloatingButton() {
+        mConversationWindow = ConversationWindowFactory.createFactory(this);
+        mConversationWindow.setOnWindowLongClickedListener(screenshotFile -> {
+            String logText = "save screenshot under " + screenshotFile.getPath();
+            Log.d(TAG, logText);
+            updateLogText(logText);
             sendWhiteBoardIntent(screenshotFile);
-            return true;
+        });
+
+        Button conversationWindowButton = findViewById(R.id.conversationWindowButton);
+        conversationWindowButton.setOnClickListener(v -> {
+            if (Settings.canDrawOverlays(this)) {
+                if (mConversationWindow.isWindowAdded()) {
+                    mConversationWindow.removeWindow();
+                    conversationWindowButton.setText("Popup Conversation Window");
+                } else {
+                    mConversationWindow.addWindow();
+                    conversationWindowButton.setText("Dismiss Conversation Window");
+                }
+            } else {
+                requestOverlayDisplayPermission();
+            }
         });
     }
 
-    public static Bitmap takeScreenshot(Context context) {
-        View rootView = ((ViewGroup) ((Activity) context).findViewById(
-                android.R.id.content)).getChildAt(0);
+    private void requestOverlayDisplayPermission() {
+        // An AlertDialog is created
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
-        Bitmap screenshot = Bitmap.createBitmap(rootView.getWidth(), rootView.getHeight(),
-                Bitmap.Config.ARGB_8888);
+        // This dialog can be closed, just by taping
+        // anywhere outside the dialog-box
+        builder.setCancelable(true);
 
-        Canvas canvas = new Canvas(screenshot);
-        rootView.draw(canvas);
+        // The title of the Dialog-box is set
+        builder.setTitle("Screen Overlay Permission Needed");
 
-        return screenshot;
-    }
+        // The message of the Dialog-box is set
+        builder.setMessage("Enable 'Display over other apps' from System Settings.");
 
-    private File saveScreenshot(Bitmap screenshot) {
-        File screenshotFile = createScreenshotFile(this, System.currentTimeMillis());
-        try (FileOutputStream out = new FileOutputStream(screenshotFile)) {
-            screenshot.compress(Bitmap.CompressFormat.PNG, 100, out);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        Log.d(TAG, "Save screenshot under the folder=" + screenshotFile.getPath());
-        updateLogText("Save screenshot under the folder=" + screenshotFile.getPath());
-        return screenshotFile;
+        // The event of the Positive-Button is set
+        builder.setPositiveButton("Open Settings", (dialog, which) -> {
+            // The app will redirect to the 'Display over other apps' in Settings.
+            // This is an Implicit Intent. This is needed when any Action is needed
+            // to perform, here it is
+            // redirecting to an other app(Settings).
+            Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName()));
+
+            // This method will start the intent. It takes two parameter, one is the Intent and the other is
+            // an requestCode Integer. Here it is -1.
+            startActivityForResult(intent, RESULT_OK);
+        });
+        mRequestPermissionDialog = builder.create();
+        mRequestPermissionDialog.show();
     }
 
     private void sendWhiteBoardIntent(File file) {
@@ -285,7 +296,8 @@ public class MainActivity extends AppCompatActivity {
         final TextView v = mLogText;
         runOnUiThread(() -> {
             String origText = v.getText().toString();
-            origText += "\n" + text;
+            // text from bottom to top
+            origText = text + "\n" + origText;
             v.setText(origText);
         });
     }
@@ -297,7 +309,6 @@ public class MainActivity extends AppCompatActivity {
         boolean interactWithUi = mProcessState.interactWithUi;
         mLanguageSpinner.setEnabled(interactWithUi);
         mFileSelectorButton.setEnabled(interactWithUi);
-        mScreenshotButton.setEnabled(interactWithUi);
         // Depends on the audio recognizing state
         if (state == ProcessState.START_AUDIO_RECOGNITION) {
             mRecordAudioButton.setEnabled(false);
@@ -375,12 +386,16 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+        if (mRequestPermissionDialog != null) {
+            mRequestPermissionDialog.dismiss();
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
 
+        mConversationWindow.removeWindow();
         unbindAiService();
     }
 }

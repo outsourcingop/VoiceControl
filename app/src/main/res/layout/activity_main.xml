@@ -28,7 +28,7 @@
     <LinearLayout
         android:id="@+id/audio_recording_buttons_linear_layout"
         android:layout_width="match_parent"
-        android:layout_height="100dp"
+        android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:gravity="center_horizontal"
         android:orientation="horizontal">
@@ -47,8 +47,15 @@
             android:layout_marginStart="8dp"
             android:layout_marginTop="0dp"
             android:text="Stop" />
-
     </LinearLayout>
+
+    <Button
+        android:id="@+id/conversationWindowButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/rounded_button"
+        android:text="Popup Conversation Window" />
 
     <TextView
         android:id="@+id/status_text"
@@ -60,33 +67,18 @@
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:layout_marginTop="8dp">
+        android:layout_height="match_parent"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/rounded_background_for_scroll_view"
+        android:padding="8dp">
 
         <TextView
             android:id="@+id/text_log"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/white"
+            android:layout_height="match_parent"
+            android:textColor="@color/black"
             android:textSize="18dp"
-            android:gravity="bottom"
-            android:paddingBottom="50dp"
-            android:textColor="@color/black" />
+            tools:ignore="ScrollViewSize" />
     </ScrollView>
 
-    <Button
-        android:id="@+id/buttonScreenShot"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/rounded_button"
-        android:text="Long click to take a screenshot" />
-
-    <ImageView
-        android:id="@+id/imageScreenShot"
-        android:layout_width="150dp"
-        android:layout_height="250dp"
-        android:layout_marginTop="8dp"
-        android:background="@color/white"
-        />
 </LinearLayout>

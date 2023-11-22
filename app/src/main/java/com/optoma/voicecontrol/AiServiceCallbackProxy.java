@@ -42,11 +42,11 @@ public class AiServiceCallbackProxy extends IAiServiceCallback.Stub {
     }
 
     @Override
-    public void onSummaryAndActionsReceived(String summary) {
+    public void onConversationReceived(String text) {
         try {
-            mAiServiceCallback.onSummaryAndActionsReceived(summary);
+            mAiServiceCallback.onConversationReceived(text);
         } catch (RemoteException e) {
-            Log.w(TAG, "run onSummaryAndActionsReceived() but " + e);
+            Log.w(TAG, "run onConversationReceived() but " + e);
         }
     }
 
@@ -60,7 +60,7 @@ public class AiServiceCallbackProxy extends IAiServiceCallback.Stub {
         }
 
         @Override
-        public void onSummaryAndActionsReceived(String summary) {
+        public void onConversationReceived(String text) {
         }
     }
 }

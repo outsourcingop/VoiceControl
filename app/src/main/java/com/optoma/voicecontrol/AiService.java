@@ -173,15 +173,24 @@ public class AiService extends Service {
         mChatPresenter = new ChatPresenter(this, mLogTextCallbackWrapper,
                 new ChatPresenter.ChatCallback() {
                     @Override
+                    public void onChatRequest(String question) {
+                        Log.d(TAG, "onChatStarted#");
+                        mAiServiceCallback.onConversationReceived(
+                                getString(R.string.conversation_request_format, question));
+                    }
+
+                    @Override
                     public void onChatResponse(String response) {
                         Log.d(TAG, "onChatResponse#");
+                        mAiServiceCallback.onConversationReceived(
+                                getString(R.string.conversation_response_format, response));
                         setState(ProcessState.END_CHAT);
                         setState(ProcessState.IDLE);
                     }
 
                     @Override
                     public void onError(String error) {
-                        Log.d(TAG, "onSummarizedError# error=" + error);
+                        Log.d(TAG, "onChatError# error=" + error);
                         setState(ProcessState.END_CHAT);
                         setState(ProcessState.IDLE);
                     }

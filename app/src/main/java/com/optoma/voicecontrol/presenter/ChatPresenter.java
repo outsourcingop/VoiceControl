@@ -5,7 +5,6 @@ import android.util.Log;
 
 import com.optoma.voicecontrol.BuildConfig;
 import com.optoma.voicecontrol.LogTextCallback;
-import com.optoma.voicecontrol.R;
 import com.optoma.voicecontrol.model.azureopenai.chat.ChatMessage;
 import com.optoma.voicecontrol.model.azureopenai.chat.ChatRequest;
 import com.optoma.voicecontrol.model.azureopenai.chat.ChatResponse;
@@ -25,6 +24,8 @@ public class ChatPresenter extends BasicPresenter {
     private final ChatPresenter.ChatCallback mChatCallback;
 
     public interface ChatCallback extends ErrorCallback {
+        void onChatRequest(String question);
+
         void onChatResponse(String response);
     }
 
@@ -35,9 +36,9 @@ public class ChatPresenter extends BasicPresenter {
         mChatCallback = chatCallback;
     }
 
-    public void getChatResponse(String language, String conversation) {
-        Log.d(TAG, "sendMessageToAzureOpenAI# " + "\n" + conversation);
-        mLogTextCallback.onLogReceived("sendMessageToAzureOpenAI -- Start");
+    public void getChatResponse(String language, String question) {
+        Log.d(TAG, "sendMessageToAzureOpenAI# " + "\n" + question);
+        mChatCallback.onChatRequest(question);
 
         List<ChatMessage> messages = new ArrayList<>();
         if (language.equalsIgnoreCase("en-us")) {
@@ -47,7 +48,7 @@ public class ChatPresenter extends BasicPresenter {
             messages.add(new ChatMessage("system",
                     "您是一個AI助手，必須使用 '''繁體中文''' 回覆。"));
         }
-        messages.add(new ChatMessage("user", conversation));
+        messages.add(new ChatMessage("user", question));
 
         mCompositeDisposable.add(
                 AzureOpenAIServiceHelper.getInstance()
@@ -57,8 +58,6 @@ public class ChatPresenter extends BasicPresenter {
                         .observeOn(AndroidSchedulers.mainThread())
                         .timeout(2, TimeUnit.MINUTES)
                         .subscribe(response -> {
-                            mLogTextCallback.onLogReceived(
-                                    "sendMessageToAzureOpenAI -- End");
                             Log.d(TAG, "onResponse: " + response.code());
                             if (response.isSuccessful()) {
                                 ChatResponse result = response.body();
