@@ -4,7 +4,7 @@ import android.content.Context;
 
 public class ConversationWindowFactory {
 
-    public static ConversationWindow createFactory(Context context) {
+    public static ConversationWindow createConversationWindow(Context context) {
         return new ConversationWindowImpl(context);
     }
 }

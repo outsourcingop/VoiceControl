@@ -1,12 +1,10 @@
 package com.optoma.voicecontrol.presenter;
 
+import static com.optoma.voicecontrol.textmatcher.TextMatcherFactory.createTextMatcher;
+
 import android.content.Context;
 import android.text.TextUtils;
 import android.util.Log;
-
-import com.optoma.voicecontrol.util.TextMatcher;
-
-import java.util.ArrayList;
 
 public class TextMatcherPresenter extends BasicPresenter {
 
@@ -24,8 +22,7 @@ public class TextMatcherPresenter extends BasicPresenter {
 
     public void startTextMatching(String language, String recognizedText) {
         Log.d(TAG, "startTextMatching +++");
-        TextMatcher matcher = new TextMatcher();
-        String matchResult = matcher.matchText(language, recognizedText);
+        String matchResult = createTextMatcher(language).matchText(recognizedText);
         if (TextUtils.isEmpty(matchResult)) {
             mBasicCallback.onLogReceived("NOT MATCH any actions.");
         } else {

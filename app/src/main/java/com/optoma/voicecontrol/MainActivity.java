@@ -30,7 +30,6 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.BinderThread;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.optoma.voicecontrol.state.ProcessState;
@@ -102,10 +101,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         @BinderThread
         public void onConversationReceived(String text) {
-            runOnUiThread(() -> {
-                Log.d(TAG, "onConversationReceived#\n" + text);
-                mConversationWindow.updateConversationOnWindow(text);
-            });
+            runOnUiThread(() -> mConversationWindow.updateConversationOnWindow(text));
         }
 
         @Override
@@ -144,7 +140,6 @@ public class MainActivity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.RequestPermission(),
                     isGranted -> {
                         if (isGranted) {
-                            updateLogText("start audio recognition");
                             startAudioRecognition();
                         } else {
                             String logText = "Not allow the " +
@@ -178,7 +173,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupFloatingButton() {
-        mConversationWindow = ConversationWindowFactory.createFactory(this);
+        mConversationWindow = ConversationWindowFactory.createConversationWindow(this);
         mConversationWindow.setOnWindowLongClickedListener(screenshotFile -> {
             String logText = "save screenshot under " + screenshotFile.getPath();
             Log.d(TAG, logText);
@@ -292,10 +287,7 @@ public class MainActivity extends AppCompatActivity {
         mRecordAudioButton.setOnClickListener(v -> mRequestAudioRecordPermissionLauncher.launch(
                 Manifest.permission.RECORD_AUDIO));
         mStopRecordingAudioButton = findViewById(R.id.stop_recording_audio_button);
-        mStopRecordingAudioButton.setOnClickListener(view -> {
-            updateLogText("stop audio recognition");
-            stopAudioRecognition();
-        });
+        mStopRecordingAudioButton.setOnClickListener(view -> stopAudioRecognition());
     }
 
     private void updateLogText(String text) {
@@ -363,6 +355,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startAudioRecognition() {
+        updateLogText("start audio recognition");
         Bundle bundle = new Bundle();
         bundle.putString(KEY_LANGUAGE, mLanguageSpinner.getSelectedItem().toString());
         // Send the params to the service
@@ -370,6 +363,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void stopAudioRecognition() {
+        updateLogText("stop audio recognition");
         // Send the params to the service
         mAiServiceProxy.stopAudioRecognition(new Bundle());
     }
