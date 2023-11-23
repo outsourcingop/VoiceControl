@@ -1,6 +1,7 @@
 package com.optoma.voicecontrol.presenter;
 
 import static com.optoma.voicecontrol.BuildConfig.DEFAULT_ENDPOINTS_PROTOCAL;
+import static com.optoma.voicecontrol.BuildConfig.SPEECH_SUBSCRPTION_KEY;
 import static com.optoma.voicecontrol.BuildConfig.STORAGE_ACCOUNT_KEY;
 import static com.optoma.voicecontrol.BuildConfig.STORAGE_ACCOUNT_NAME;
 
@@ -14,6 +15,11 @@ import com.microsoft.azure.storage.blob.BlobContainerPublicAccessType;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
+import com.microsoft.cognitiveservices.speech.SpeechConfig;
+import com.microsoft.cognitiveservices.speech.SpeechRecognitionResult;
+import com.microsoft.cognitiveservices.speech.SpeechRecognizer;
+import com.microsoft.cognitiveservices.speech.audio.AudioConfig;
+import com.optoma.voicecontrol.R;
 import com.optoma.voicecontrol.model.RecognizedPhrase;
 import com.optoma.voicecontrol.model.TranscribeBean;
 import com.optoma.voicecontrol.model.TranscribeBody;
@@ -22,6 +28,7 @@ import com.optoma.voicecontrol.model.TranscribeResult;
 import com.optoma.voicecontrol.model.TranscribeValue;
 import com.optoma.voicecontrol.network.CognitiveServiceHelper;
 import com.optoma.voicecontrol.network.NetworkServiceHelper;
+import com.optoma.voicecontrol.util.MicrophoneStream;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -36,8 +43,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Completable;
@@ -70,12 +79,14 @@ public class TranscribePresenter extends BasicPresenter {
         super(context, transcribeCallback);
         TAG = TranscribePresenter.class.getSimpleName();
         mTranscribeCallback = transcribeCallback;
+        mSpeechRegion = context.getResources().getString(R.string.speech_region);
+        mCopyOnWriteTexts = new CopyOnWriteArrayList<>();
     }
 
     public interface TranscribeCallback extends BasicCallback {
         void onTranscribed(String text, long timeStamp);
 
-        void onAllPartsTranscribed(Map<Integer, String> partNumberToTranscriber, long timeStamp);
+        void onAllPartsTranscribed(String transcribeResult);
     }
 
     private final Map<String, Integer> mTranscribeIDToPartNumber = new HashMap<>();
@@ -86,6 +97,37 @@ public class TranscribePresenter extends BasicPresenter {
     private CloudBlockBlob mCloudBlockBlob;
     private CloudBlobContainer mCloudBlobContainer;
     private TranscribeResult mTranscribeResult;
+
+    private final String mSpeechRegion;
+    private SpeechConfig mSpeechConfig;
+    private AudioConfig mAudioInput;
+    private SpeechRecognizer mSpeechRecognizer;
+
+    private final CopyOnWriteArrayList<String> mCopyOnWriteTexts;
+    public void startContinuousRecognitionAsync(List<String> absolutePathList, String currentLanguage) {
+        Log.d(TAG, "startContinuousRecognitionAsync# currentLanguage=" + currentLanguage);
+
+        mSpeechConfig = SpeechConfig.fromSubscription(SPEECH_SUBSCRPTION_KEY, mSpeechRegion);
+        mSpeechConfig.setSpeechRecognitionLanguage(currentLanguage);
+        mAudioInput = AudioConfig.fromWavFileInput(absolutePathList.get(0));
+        mSpeechRecognizer = new SpeechRecognizer(mSpeechConfig, mAudioInput);
+
+        Future<SpeechRecognitionResult> task = mSpeechRecognizer.recognizeOnceAsync();
+
+        mSpeechRecognizer.recognizing.addEventListener((o, speechRecognitionResultEventArgs) -> {
+            String s = speechRecognitionResultEventArgs.getResult().getText();
+            Log.d(TAG, "Intermediate result received: " + s);
+            mBasicCallback.onLogReceived(s + " ");
+        });
+
+        mSpeechRecognizer.recognized.addEventListener((o, speechRecognitionResultEventArgs) -> {
+            String s = speechRecognitionResultEventArgs.getResult().getText();
+            mCopyOnWriteTexts.add(s);
+            mTranscribeCallback.onAllPartsTranscribed(s);
+            Log.d(TAG, "Final result received: " + s);
+            mBasicCallback.onLogReceived("Final result: " + s);
+        });
+    }
 
     public void uploadAudioAndTranscribe(List<String> absolutePathList, String languageString) {
         Log.d(TAG, "uploadFileFromFile: start");
@@ -389,8 +431,8 @@ public class TranscribePresenter extends BasicPresenter {
 
         // Get all results from server and start to process next step.
         if (mPartNumberToTranscriberForChat.size() == mTranscribeIDToPartNumber.size()) {
-            mTranscribeCallback.onAllPartsTranscribed(mPartNumberToTranscriberForChat,
-                    timestamp);
+//            mTranscribeCallback.onAllPartsTranscribed(mPartNumberToTranscriberForChat,
+//                    timestamp);
         }
         mBasicCallback.onLogReceived("Transcription:\n" + sbTranscriptionForView);
     }

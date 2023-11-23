@@ -46,7 +46,7 @@ public class AiService extends Service {
                 audioFilePathList.add(audioFilePath);
             }
             setState(ProcessState.START_TRANSCRIBE);
-            mTranscribePresenter.uploadAudioAndTranscribe(audioFilePathList, mCurrentLanguage);
+            mTranscribePresenter.startContinuousRecognitionAsync(audioFilePathList, mCurrentLanguage);
         }
 
         @Override
@@ -105,13 +105,12 @@ public class AiService extends Service {
                     }
 
                     @Override
-                    public void onAllPartsTranscribed(Map<Integer, String> partNumberToTranscriber,
-                            long timeStamp) {
+                    public void onAllPartsTranscribed(String transcribeResult) {
                         Log.d(TAG, "onAllPartsTranscribed -> getAndStoreSummary");
                         setState(ProcessState.END_TRANSCRIBE);
                         setState(ProcessState.START_TEXT_MATCHING);
                         mTextMatcherPresenter.startTextMatching(mCurrentLanguage,
-                                partNumberToTranscriber.get(0));
+                                transcribeResult);
                     }
 
                     @Override
