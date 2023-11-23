@@ -122,7 +122,7 @@ public class SpeechRecognizerPresenter extends BasicPresenter {
             if (TextUtils.isEmpty(recognizedText)) {
                 continue;
             }
-            serializedRecognizedText.append("{").append(recognizedText).append("}, ");
+            serializedRecognizedText.append(recognizedText).append(" ");
         }
         mSpeechRecognizerCallback.onSpeechRecognitionCompleted(serializedRecognizedText.toString());
     }
