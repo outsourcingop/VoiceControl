@@ -14,6 +14,7 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.TextView;
@@ -29,6 +30,7 @@ public class ConversationWindowImpl implements ConversationWindow, View.OnLongCl
     private final Context mContext;
     private final WindowManager mWm;
     private final WindowManager.LayoutParams mWindowLayoutParam;
+    private final int mTouchSlop;
 
     private boolean mWindowAdded;
 
@@ -41,6 +43,7 @@ public class ConversationWindowImpl implements ConversationWindow, View.OnLongCl
         mContext = context;
         mWm = (WindowManager) context.getSystemService(WINDOW_SERVICE);
         mWindowLayoutParam = createLayoutParams();
+        mTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
 
         setupUi();
     }
@@ -56,9 +59,11 @@ public class ConversationWindowImpl implements ConversationWindow, View.OnLongCl
         // the parameters of the layout. One of them is Layout_type.
         int layoutType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
 
+        int windowWidth = (int) (width * (0.95f));
+        int windowHeight = (int) (height * (0.4f));
         // Now the Parameter of the floating-window layout is set.
-        // 1) The Width of the window will be 55% of the phone width.
-        // 2) The Height of the window will be 58% of the phone height.
+        // 1) The Width of the window will be 95% of the phone width.
+        // 2) The Height of the window will be 40% of the phone height.
         // 3) Layout_Type is already set.
         // 4) Next Parameter is Window_Flag. Here FLAG_NOT_FOCUSABLE is used. But
         // problem with this flag is key inputs can't be given to the EditText.
@@ -66,8 +71,8 @@ public class ConversationWindowImpl implements ConversationWindow, View.OnLongCl
         // 5) Next parameter is Layout_Format. System chooses a format that supports
         // translucency by PixelFormat.TRANSLUCENT
         WindowManager.LayoutParams windowLayoutParam = new WindowManager.LayoutParams(
-                (int) (width * (0.95f)),
-                (int) (height * (0.4f)),
+                windowWidth,
+                windowHeight,
                 layoutType,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT
@@ -75,11 +80,11 @@ public class ConversationWindowImpl implements ConversationWindow, View.OnLongCl
 
         // The Gravity of the Floating Window is set.
         // The Window will appear in the center of the screen
-        windowLayoutParam.gravity = Gravity.BOTTOM;
+        windowLayoutParam.gravity = Gravity.TOP;
 
         // X and Y value of the window is set
         windowLayoutParam.x = 0;
-        windowLayoutParam.y = 0;
+        windowLayoutParam.y = height - windowHeight;
 
         return windowLayoutParam;
     }
@@ -106,7 +111,6 @@ public class ConversationWindowImpl implements ConversationWindow, View.OnLongCl
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-
                 switch (event.getAction()) {
                     // When the window will be touched,
                     // the x and y position of that position
@@ -126,14 +130,25 @@ public class ConversationWindowImpl implements ConversationWindow, View.OnLongCl
                     // When the window will be dragged around,
                     // it will update the x, y of the Window Layout Parameter
                     case MotionEvent.ACTION_MOVE:
-                        floatWindowLayoutUpdateParam.x = (int) ((x + event.getRawX()) - px);
-                        floatWindowLayoutUpdateParam.y = -(int) ((y + event.getRawY()) - py);
+                        float rawX = event.getRawX();
+                        float rawY = event.getRawY();
+                        floatWindowLayoutUpdateParam.x = (int) ((x + rawX) - px);
+                        floatWindowLayoutUpdateParam.y = (int) ((y + rawY) - py);
 
                         // updated parameter is applied to the WindowManager
                         mWm.updateViewLayout(mRootView, floatWindowLayoutUpdateParam);
+
+                        // cancel long press if needed
+                        cancelLongPress(rawX, rawY);
                         break;
                 }
                 return false;
+            }
+
+            private void cancelLongPress(float x, float y) {
+                if (Math.abs(x - px) >= mTouchSlop || Math.abs(y - py) >= mTouchSlop) {
+                    mRootView.cancelLongPress();
+                }
             }
         });
         return true;
@@ -192,7 +207,9 @@ public class ConversationWindowImpl implements ConversationWindow, View.OnLongCl
 
     @Override
     public void removeWindow() {
-        mWm.removeViewImmediate(mRootView);
+        if (mWindowAdded) {
+            mWm.removeViewImmediate(mRootView);
+        }
         mWindowAdded = false;
     }
 
