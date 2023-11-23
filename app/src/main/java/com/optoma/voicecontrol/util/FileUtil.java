@@ -206,21 +206,6 @@ public class FileUtil {
         return newFileAbsolutePath;
     }
 
-    public static int extractPartNumber(String absolutePath) throws NumberFormatException {
-        String fileName = absolutePath.substring(absolutePath.lastIndexOf("/") + 1);
-
-        Log.d(TAG, "fileName: " + fileName);
-        int lastDotIndex = fileName.lastIndexOf('.');
-        if (lastDotIndex >= 0) {
-            String fileNameWithoutExtension = fileName.substring(0, lastDotIndex);
-            String[] lastInt = fileNameWithoutExtension.split("_");
-            Log.d(TAG, "lastInt[lastInt.length - 1]: " + lastInt[lastInt.length - 1]);
-            return Integer.parseInt(lastInt[lastInt.length - 1]);
-        }
-
-        return -1;
-    }
-
     /**
      * @param uri The Uri to check.
      * @return Whether the Uri authority is ExternalStorageProvider.

@@ -3,7 +3,6 @@ package com.optoma.voicecontrol.presenter;
 import static com.optoma.voicecontrol.BuildConfig.DEFAULT_ENDPOINTS_PROTOCAL;
 import static com.optoma.voicecontrol.BuildConfig.STORAGE_ACCOUNT_KEY;
 import static com.optoma.voicecontrol.BuildConfig.STORAGE_ACCOUNT_NAME;
-import static com.optoma.voicecontrol.util.FileUtil.extractPartNumber;
 
 import android.content.Context;
 import android.util.Log;
@@ -141,7 +140,7 @@ public class TranscribePresenter extends BasicPresenter {
                             Log.d(TAG, "Upload complete " + blob.getUri());
 
                             mWavContentUrl = blob.getUri().toString();
-                            createSpeechToText(languageString, extractPartNumber(absolutePath));
+                            createSpeechToText(languageString);
 
                             // Storage post action++
                             // Delete the blobs
@@ -179,10 +178,9 @@ public class TranscribePresenter extends BasicPresenter {
      * Create and initiate a speech-to-text operation for a specific language using the audio file part.
      *
      * @param languageString The target language for the speech recognition.
-     * @param filePartNumber The part number of the audio file (starting from 0).
      */
-    private void createSpeechToText(String languageString, int filePartNumber) {
-        Log.d(TAG, "createSpeechToText: " + languageString + "\tfilePartNumber: " + filePartNumber);
+    private void createSpeechToText(String languageString) {
+        Log.d(TAG, "createSpeechToText: " + languageString);
 
         TranscribeProperties properties = new TranscribeProperties();
         properties.diarizationEnabled = true;
@@ -214,8 +212,8 @@ public class TranscribePresenter extends BasicPresenter {
 
                                 if (response.code() == 201) {
                                     Log.d(TAG,
-                                            "createTranscription success: " + transcriptionID + ", filePartNumber: " + filePartNumber);
-                                    mTranscribeIDToPartNumber.put(transcriptionID, filePartNumber);
+                                            "createTranscription success: " + transcriptionID + ", filePartNumber: " + 0);
+                                    mTranscribeIDToPartNumber.put(transcriptionID, 0);
                                     startPolling(transcriptionID);
                                 }
                             } else {
