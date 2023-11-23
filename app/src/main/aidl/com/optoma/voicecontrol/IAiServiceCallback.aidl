@@ -9,7 +9,9 @@ interface IAiServiceCallback {
 
     void onLogReceived(in String text) = 2;
 
-    void onConversationReceived(in String text) = 3;
+    void onLiveCaptionReceived(in String text) = 3;
 
-    void onSpeechRecognitionStoppingAutomatically() = 4;
+    void onConversationReceived(in String text) = 4;
+
+    void onSpeechRecognitionStoppingAutomatically() = 5;
 }

@@ -34,10 +34,13 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.optoma.voicecontrol.state.ProcessState;
 import com.optoma.voicecontrol.util.FileUtil;
+import com.optoma.voicecontrol.util.LogText;
 import com.optoma.voicecontrol.view.ConversationWindow;
 import com.optoma.voicecontrol.view.ConversationWindowFactory;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -48,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String ACTION_AI_SERVICE = "android.intent.action.AI_SERVICE";
 
     private final AiServiceProxy mAiServiceProxy = new AiServiceProxy();
+    private final List<LogText> mLogTextHistory = new ArrayList<>();
 
     private boolean mAiServiceBound;
 
@@ -95,6 +99,15 @@ public class MainActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 Log.d(TAG, "onLogReceived# " + text);
                 updateLogText(text);
+            });
+        }
+
+        @Override
+        @BinderThread
+        public void onLiveCaptionReceived(String text) {
+            runOnUiThread(() -> {
+                Log.d(TAG, "onLiveCaptionReceived# " + text);
+                updateLogText(text, true /* isLiveCaptionText */);
             });
         }
 
@@ -291,15 +304,30 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateLogText(String text) {
+        updateLogText(text, false);
+    }
+
+    private void updateLogText(String text, boolean isLiveCaptionText) {
         if (mLogText == null) {
             mLogText = findViewById(R.id.text_log);
         }
         final TextView v = mLogText;
         runOnUiThread(() -> {
-            String origText = v.getText().toString();
+            if (isLiveCaptionText) {
+                // remove the last one(also live caption text) that repeats live caption.
+                int lastOneIndex = mLogTextHistory.size() - 1;
+                if (mLogTextHistory.get(lastOneIndex).mIsLiveCaptionText) {
+                    mLogTextHistory.remove(lastOneIndex);
+                }
+            }
+            // Put it the last one
+            mLogTextHistory.add(new LogText(text, isLiveCaptionText));
             // text from bottom to top
-            origText = text + "\n" + origText;
-            v.setText(origText);
+            StringBuilder serializedLogTextHistory = new StringBuilder();
+            for (int i = mLogTextHistory.size() - 1; i >= 0; --i) {
+                serializedLogTextHistory.append(mLogTextHistory.get(i).mLogText).append("\n");
+            }
+            v.setText(serializedLogTextHistory);
         });
     }
 

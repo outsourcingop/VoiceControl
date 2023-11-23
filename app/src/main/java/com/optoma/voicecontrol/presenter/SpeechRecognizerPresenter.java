@@ -27,6 +27,8 @@ public class SpeechRecognizerPresenter extends BasicPresenter {
     private static final int MESSAGE_CONTINUOUS_RECOGNITION_TIMEOUT = 0;
 
     public interface SpeechRecognizerCallback extends BasicCallback {
+        void onLiveCaptionReceived(String recognizedText);
+
         void onSpeechRecognitionCompleted(String recognizedText);
 
         void onSpeechRecognitionStoppingAutomatically();
@@ -78,7 +80,7 @@ public class SpeechRecognizerPresenter extends BasicPresenter {
             startContinuousRecognitionStoppingTimer();
             String s = speechRecognitionResultEventArgs.getResult().getText();
             Log.d(TAG, "Intermediate result received: " + s);
-            mBasicCallback.onLogReceived(s + " ");
+            mSpeechRecognizerCallback.onLiveCaptionReceived(s);
         });
 
         mSpeechRecognizer.recognized.addEventListener((o, speechRecognitionResultEventArgs) -> {
