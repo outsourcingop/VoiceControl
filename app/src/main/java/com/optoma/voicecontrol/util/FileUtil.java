@@ -190,18 +190,6 @@ public class FileUtil {
                 ".wav";
         String newFileAbsolutePath = path.substring(0,
                 path.lastIndexOf("/")) + "/" + newFileName;
-        File newFile = new File(newFileAbsolutePath);
-
-        try {
-            newFile.createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        if (newFile.exists()) {
-            newFile.setWritable(true);
-        } else {
-            Log.e(TAG, "transAudioResource: Fail to setWritable to " + newFileAbsolutePath);
-        }
 
         return newFileAbsolutePath;
     }
