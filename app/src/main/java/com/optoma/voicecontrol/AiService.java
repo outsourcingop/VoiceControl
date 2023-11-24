@@ -100,8 +100,8 @@ public class AiService extends Service {
         mTranscribePresenter = new TranscribePresenter(this,
                 new TranscribePresenter.TranscribeCallback() {
                     @Override
-                    public void onTranscribed(String transcribeResult, long timeStamp) {
-                        Log.d(TAG, "onTranscribed -> getAndStoreSummary");
+                    public void onLiveCaptionReceived(String recognizedText) {
+                        mAiServiceCallback.onLiveCaptionReceived(recognizedText);
                     }
 
                     @Override
@@ -188,7 +188,7 @@ public class AiService extends Service {
         mChatPresenter = new ChatPresenter(this, new ChatPresenter.ChatCallback() {
             @Override
             public void onChatRequest(String request) {
-                Log.d(TAG, "onChatStarted#");
+                Log.d(TAG, "onChatRequest#");
                 String decoratedRequest = getString(R.string.conversation_request_format, request);
                 onLogReceived(decoratedRequest);
                 mAiServiceCallback.onConversationReceived(decoratedRequest);

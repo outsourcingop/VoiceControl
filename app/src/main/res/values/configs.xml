@@ -9,8 +9,6 @@
     <string name="screenshot_file_name">Screenshot_%1$s.png</string>
     <!-- Date format for output file name -->
     <string name="date_format">yyyy_MM_dd_HH_mm</string>
-    <!-- Minutes -->
-    <integer name="each_segment_duration">8</integer>
     <!-- Replace below with your own service region (e.g., "westus") -->
     <string name="speech_region">eastasia</string>
     <!-- Duration of the speech recognition stopping (milliseconds) -->

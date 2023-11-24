@@ -14,6 +14,7 @@ import com.microsoft.cognitiveservices.speech.SpeechRecognitionResult;
 import com.microsoft.cognitiveservices.speech.SpeechRecognizer;
 import com.microsoft.cognitiveservices.speech.audio.AudioConfig;
 import com.optoma.voicecontrol.R;
+
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
@@ -30,10 +31,11 @@ public class TranscribePresenter extends BasicPresenter {
     }
 
     public interface TranscribeCallback extends BasicCallback {
-        void onTranscribed(String text, long timeStamp);
+        void onLiveCaptionReceived(String recognizedText);
 
         void onAllPartsTranscribed(String transcribeResult);
     }
+
     private final String mSpeechRegion;
     private SpeechConfig mSpeechConfig;
     private AudioConfig mAudioInput;
@@ -41,7 +43,8 @@ public class TranscribePresenter extends BasicPresenter {
 
     private final CopyOnWriteArrayList<String> mCopyOnWriteTexts;
 
-    public void startContinuousRecognitionAsync(List<String> absolutePathList, String currentLanguage) {
+    public void startContinuousRecognitionAsync(List<String> absolutePathList,
+            String currentLanguage) {
         Log.d(TAG, "startContinuousRecognitionAsync# currentLanguage=" + currentLanguage);
 
         if (!isWavFile(absolutePathList.get(0))) {
@@ -78,7 +81,7 @@ public class TranscribePresenter extends BasicPresenter {
         mSpeechRecognizer.recognizing.addEventListener((o, speechRecognitionResultEventArgs) -> {
             String s = speechRecognitionResultEventArgs.getResult().getText();
             Log.d(TAG, "Intermediate result received: " + s);
-            mBasicCallback.onLogReceived(s + " ");
+            mTranscribeCallback.onLiveCaptionReceived(s);
         });
 
         mSpeechRecognizer.recognized.addEventListener((o, speechRecognitionResultEventArgs) -> {

@@ -14,7 +14,6 @@ public class BasicPresenter {
 
     protected final Context mContext;
     protected final BasicCallback mBasicCallback;
-    protected final int mEachSegmentDuration;
 
     protected CompositeDisposable mCompositeDisposable = new CompositeDisposable();
 
@@ -27,7 +26,6 @@ public class BasicPresenter {
     public BasicPresenter(Context context, BasicCallback basicCallback) {
         mContext = context;
         mBasicCallback = basicCallback;
-        mEachSegmentDuration = context.getResources().getInteger(R.integer.each_segment_duration);
     }
 
     public void destroy() {
