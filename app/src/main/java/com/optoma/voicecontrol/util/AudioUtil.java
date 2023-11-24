@@ -3,10 +3,12 @@ package com.optoma.voicecontrol.util;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.util.Log;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -58,5 +60,18 @@ public class AudioUtil {
         double totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
 
         return (int) Math.ceil(totalSeconds / (eachSegmentDuration * 60));
+    }
+
+    public static int getAudioFileDuration(Context context, Uri uri) {
+        int millSecond = -1;
+        try (MediaMetadataRetriever mmr = new MediaMetadataRetriever()) {
+            mmr.setDataSource(context, uri);
+            String durationStr = mmr.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_DURATION);
+            millSecond = Integer.parseInt(durationStr);
+        } catch (IOException e) {
+            Log.w(TAG, "e");
+        }
+        return millSecond;
     }
 }

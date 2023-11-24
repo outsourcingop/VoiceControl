@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Max duration of the selected audio file (milliseconds) -->
+    <integer name="max_audio_duration">60000</integer>
     <!-- The component name for the target activity -->
     <string name="intent_target_package_name">com.optoma.whiteboard</string>
     <string name="intent_target_class_name">com.optoma.whiteboard.cb.MainActivity</string>

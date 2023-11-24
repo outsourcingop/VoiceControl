@@ -3,6 +3,7 @@ package com.optoma.voicecontrol;
 import static com.optoma.voicecontrol.AiServiceProxy.KEY_AUDIO_FILE_PATH;
 import static com.optoma.voicecontrol.AiServiceProxy.KEY_CALLBACK;
 import static com.optoma.voicecontrol.AiServiceProxy.KEY_LANGUAGE;
+import static com.optoma.voicecontrol.util.AudioUtil.getAudioFileDuration;
 import static com.optoma.voicecontrol.util.DebugConfig.TAG_VC;
 import static com.optoma.voicecontrol.util.DebugConfig.TAG_WITH_CLASS_NAME;
 
@@ -406,6 +407,12 @@ public class MainActivity extends AppCompatActivity {
             if (data != null) {
                 updateLogText("File picked, Uri = " + data.getData());
                 Uri selectedAudioUri = data.getData();
+                // Not allow the user to choose a large file so limit it (SPEC).
+                int audioDuration = getAudioFileDuration(this, selectedAudioUri);
+                if (audioDuration > getResources().getInteger(R.integer.max_audio_duration)) {
+                    updateLogText("Duration of selected audio should be less than 1 min !!");
+                    return;
+                }
                 String fileAbsolutePath = FileUtil.getAbsolutePath(MainActivity.this,
                         selectedAudioUri);
                 updateLogText("fileAbsolutePath = " + fileAbsolutePath);
