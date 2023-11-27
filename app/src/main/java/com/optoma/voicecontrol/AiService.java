@@ -21,10 +21,6 @@ import com.optoma.voicecontrol.presenter.TextMatcherPresenter;
 import com.optoma.voicecontrol.presenter.TranscribePresenter;
 import com.optoma.voicecontrol.state.ProcessState;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
 public class AiService extends Service {
 
     private static final String TAG = TAG_WITH_CLASS_NAME ? "AiService" : TAG_VC;
@@ -40,13 +36,9 @@ public class AiService extends Service {
         public void startAudioProcessing(Bundle params) {
             Log.d(TAG, "AIDL.Stub#startAudioProcessing params=" + params.size());
             mCurrentLanguage = params.getString(KEY_LANGUAGE);
-            List<String> audioFilePathList = new ArrayList<>();
-            String audioFilePath = params.getString(KEY_AUDIO_FILE_PATH);
-            if (audioFilePath != null) {
-                audioFilePathList.add(audioFilePath);
-            }
             setState(ProcessState.START_TRANSCRIBE);
-            mTranscribePresenter.startContinuousRecognitionAsync(audioFilePathList, mCurrentLanguage);
+            mTranscribePresenter.startContinuousRecognitionAsync(mCurrentLanguage,
+                    params.getString(KEY_AUDIO_FILE_PATH));
         }
 
         @Override
@@ -106,7 +98,8 @@ public class AiService extends Service {
 
                     @Override
                     public void onAllPartsTranscribed(String transcribeResult) {
-                        Log.d(TAG, "onAllPartsTranscribed -> getAndStoreSummary");
+                        Log.d(TAG, "onAllPartsTranscribed# transcribedLength=" +
+                                transcribeResult.length());
                         setState(ProcessState.END_TRANSCRIBE);
                         setState(ProcessState.START_TEXT_MATCHING);
                         mTextMatcherPresenter.startTextMatching(mCurrentLanguage,

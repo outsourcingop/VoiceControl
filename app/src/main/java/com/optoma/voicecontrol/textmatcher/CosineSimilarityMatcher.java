@@ -20,6 +20,9 @@ public class CosineSimilarityMatcher implements TextMatcher {
 
     @Override
     public String matchText(String input) {
+        if (input.length() > mTable.getMaxLengthForEachWord()) {
+            return null;
+        }
         input = input.toLowerCase().replaceAll("\\s+", "");
         for (String text : mTable.mTextList) {
             String normalizedText = text.toLowerCase().replaceAll("\\s+", "");

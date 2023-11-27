@@ -7,6 +7,8 @@ public abstract class TextTable {
 
     public final List<String> mTextList;
 
+    private int mMaxLengthForEachWord;
+
     TextTable() {
         mTextList = new ArrayList<>();
         mTextList.addAll(createInputSourceTable());
@@ -24,6 +26,19 @@ public abstract class TextTable {
         mTextList.addAll(createCalendarTable());
         mTextList.addAll(createBookingTable());
         mTextList.addAll(createSlidePageTable());
+        // It is used to recognize each word in the table when the audio input is coming.
+        // If the length of each sentence is greater than the variable, it means we can ignore the
+        // text matching.
+        mMaxLengthForEachWord = 0;
+        for (String word : mTextList) {
+            if (word.length() > mMaxLengthForEachWord) {
+                mMaxLengthForEachWord = word.length();
+            }
+        }
+    }
+
+    public int getMaxLengthForEachWord() {
+        return mMaxLengthForEachWord;
     }
 
     protected abstract List<String> createInputSourceTable();
